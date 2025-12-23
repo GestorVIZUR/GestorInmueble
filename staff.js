@@ -11,23 +11,27 @@ import {
   deleteDoc
 } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js";
 
-// Reutilizamos la misma app Firebase inicializada en app.js
+// Intentamos obtener la app ya inicializada en app.js
+// Si da error, asegúrate de que app.js cargue antes o tenga la config. 
+// En este flujo modular, getApp() suele funcionar bien si app.js ya corrió.
 const app = getApp();
 const db = getFirestore(app);
 
-// ----- DOM principal para el módulo de personal -----
+// =======================================================
+//  REFERENCIAS DOM
+// =======================================================
 const staffModuleRoot = document.getElementById("staff-module-root");
 const currentBuildingHidden = document.getElementById("current-building-id");
-const currentUnitHidden = document.getElementById("current-unit-id");
+// Labels para mostrar contexto en el modal
 const staffBuildingLabel = document.getElementById("staff-building-label");
-const staffUnitLabel = document.getElementById("staff-unit-label");
 
-// Resúmenes en otras pestañas
+// Resúmenes en otras pestañas (Inmuebles / Unidades)
 const summaryStaffCount = document.getElementById("summary-staff-count");
 const summaryStaffNames = document.getElementById("summary-staff-names");
 const unitsSummaryStaff = document.getElementById("units-summary-staff");
+const unitsStaffList = document.getElementById("units-staff-list");
 
-// ----- Modal de personal -----
+// Modal de personal
 const staffModal = document.getElementById("staff-modal");
 const staffModalForm = document.getElementById("staff-modal-form");
 const staffModalIdInput = document.getElementById("staff-modal-id");
@@ -40,28 +44,27 @@ const staffModalBuildingNameLabel = document.getElementById("staff-modal-buildin
 const staffModalCloseBtn = document.getElementById("staff-modal-close");
 const staffModalCancelBtn = document.getElementById("staff-modal-cancel");
 
-// Referencias de contenedores
-let staffGridContainer = null; // Reemplaza a staffList
-let unitsStaffList = null;     // Lista de solo lectura en Unidades
+// Variable interna para controlar el contenedor del grid
+let staffGridContainer = null;
 
 // =======================================================
-//  Utilidades de resumen de personal
+//  FUNCIONES DE RESUMEN (Actualizan textos en la UI)
 // =======================================================
 function actualizarResumenStaff(total, nombresActivos) {
   if (!Array.isArray(nombresActivos)) nombresActivos = [];
 
+  // 1. Resumen en Tab Inmuebles (Tarjeta superior)
   if (summaryStaffCount) {
     summaryStaffCount.textContent = String(total ?? 0);
   }
-
   if (summaryStaffNames) {
     if (total === 0) {
       summaryStaffNames.textContent = "Sin personal registrado";
     } else if (nombresActivos.length === 0) {
       summaryStaffNames.textContent =
         total === 1
-          ? "1 persona registrada (ninguna activa)"
-          : `${total} personas registradas (ninguna activa)`;
+          ? "1 registrado (inactivo)"
+          : `${total} registrados (ninguno activo)`;
     } else {
       const todos = nombresActivos.join(", ");
       if (total === nombresActivos.length) {
@@ -72,104 +75,93 @@ function actualizarResumenStaff(total, nombresActivos) {
     }
   }
 
+  // 2. Resumen en Tab Unidades (Context Card)
   if (unitsSummaryStaff) {
     if (total === 0) {
       unitsSummaryStaff.textContent = "Sin personal asignado";
     } else if (nombresActivos.length === 0) {
-      unitsSummaryStaff.textContent =
-        total === 1
-          ? "1 persona registrada (ninguna activa)"
-          : `${total} personas registradas (ninguna activa)`;
+      unitsSummaryStaff.textContent = "Sin personal activo";
     } else {
-      const primeros = nombresActivos.slice(0, 3).join(", ");
+      const primeros = nombresActivos.slice(0, 2).join(", ");
       const extra =
-        nombresActivos.length > 3 ? ` y ${nombresActivos.length - 3} más` : "";
-
-      const texto =
-        nombresActivos.length === 1
-          ? `1 activo: ${primeros}`
-          : `${nombresActivos.length} activos: ${primeros}${extra}`;
-
-      unitsSummaryStaff.textContent = texto;
+        nombresActivos.length > 2 ? ` y ${nombresActivos.length - 2} más` : "";
+      unitsSummaryStaff.textContent = `${primeros}${extra}`;
     }
   }
 }
 
 // =======================================================
-//  UI principal en pestaña INMUEBLES (Diseño Data Grid)
+//  UI: INICIALIZACIÓN
 // =======================================================
 function initStaffUI() {
   if (!staffModuleRoot) return;
-
-  // Estructura limpia para contener el grid
+  // Preparamos el contenedor con la clase de estilo "mui-data-grid"
   staffModuleRoot.innerHTML = `
     <div style="margin-top: 0.5rem;">
       <div id="staff-grid-container" class="mui-data-grid">
-        </div>
+        <div style="padding:1rem; color:var(--text-muted);">Cargando...</div>
+      </div>
     </div>
   `;
-
   staffGridContainer = staffModuleRoot.querySelector("#staff-grid-container");
 }
 
 // =======================================================
-//  Bloque adicional en pestaña UNIDADES (solo lectura)
-// =======================================================
-function initUnitsStaffBlock() {
-  const container = document.getElementById("units-staff-section");
-  if (!container) return;
-  unitsStaffList = container.querySelector("#units-staff-list");
-}
-
-// =======================================================
-//  Cargar personal por inmueble
+//  CORE: CARGAR PERSONAL
 // =======================================================
 async function cargarPersonalEdificio(buildingId) {
-  // 1. Limpieza inicial
+  // Limpieza inicial
   if (staffGridContainer) staffGridContainer.innerHTML = "";
   if (unitsStaffList) unitsStaffList.innerHTML = "";
 
+  // Si no hay edificio seleccionado
   if (!buildingId) {
     if (staffGridContainer) {
-      staffGridContainer.innerHTML = '<div style="padding:1rem;">Selecciona un inmueble para ver su personal.</div>';
+      staffGridContainer.innerHTML = '<div style="padding:1.5rem; text-align:center; color:var(--text-muted);">Selecciona un inmueble para gestionar su personal.</div>';
     }
     actualizarResumenStaff(0, []);
     return;
   }
 
-  // 2. Consulta a Firebase
+  // Consulta Firestore
   const qStaff = query(
     collection(db, "staff"),
     where("buildingId", "==", buildingId)
   );
-  const snapshot = await getDocs(qStaff);
 
-  // 3. Si no hay datos
+  let snapshot;
+  try {
+    snapshot = await getDocs(qStaff);
+  } catch (e) {
+    console.error("Error cargando staff:", e);
+    if (staffGridContainer) staffGridContainer.innerHTML = '<div style="padding:1rem; color:var(--danger);">Error cargando datos.</div>';
+    return;
+  }
+
+  // Si no hay datos
   if (snapshot.empty) {
     if (staffGridContainer) {
-      staffGridContainer.innerHTML = '<div style="padding:1rem;">No hay personal registrado para este inmueble.</div>';
+      staffGridContainer.innerHTML = '<div style="padding:1.5rem; text-align:center; color:var(--text-muted);">No hay personal registrado en este inmueble.</div>';
     }
     if (unitsStaffList) {
-      const li = document.createElement("li");
-      li.textContent = "No hay personal registrado.";
-      unitsStaffList.appendChild(li);
+      unitsStaffList.innerHTML = '<li style="color:var(--text-muted); justify-content:center;">Sin personal asignado.</li>';
     }
     actualizarResumenStaff(0, []);
     return;
   }
 
-  // 4. Construir la Tabla (Estilo Data Grid igual que Inmuebles)
+  // Construir Tabla
   const nombresActivos = [];
   let total = 0;
 
   const table = document.createElement("table");
-  table.className = "mui-data-grid-table";
+  table.className = "mui-data-grid-table"; // Usamos la clase CSS nueva
 
   const thead = document.createElement("thead");
   thead.innerHTML = `
     <tr>
-      <th>Personal</th>
-      <th>Detalles Financieros</th>
+      <th>Nombre / Cargo</th>
+      <th>Contacto & Costo</th>
       <th style="text-align:right;">Acciones</th>
     </tr>
   `;
@@ -181,74 +173,82 @@ async function cargarPersonalEdificio(buildingId) {
     total += 1;
     const data = docSnap.data();
     const id = docSnap.id;
-
     const sueldo = Number(data.sueldo || 0);
-    const estadoLabel = data.activo ? "ACTIVO" : "INACTIVO";
     
-    // Fila de la tabla
+    // Configuración visual del estado (Pill)
+    const isActive = data.activo;
+    const pillColor = isActive ? "var(--success)" : "var(--text-muted)";
+    const pillBg = isActive ? "var(--success-bg)" : "var(--bg-body)";
+    const estadoTexto = isActive ? "ACTIVO" : "INACTIVO";
+
+    // Fila Principal
     const tr = document.createElement("tr");
 
-    // -- Columna Principal --
+    // Columna 1: Nombre y Estado
     const tdMain = document.createElement("td");
-    tdMain.className = "mui-col-main";
-    
     tdMain.innerHTML = `
-      <div class="mui-main-title">
-        <span>${data.nombre || "Sin nombre"}</span>
-        <span class="mui-pill" style="${!data.activo ? 'background:#fee2e2; color:#991b1b;' : ''}">
-          ${estadoLabel}
+      <div style="display:flex; align-items:center; gap:0.5rem;">
+        <span style="font-weight:600; font-size:0.95rem; color:var(--text-main);">${data.nombre || "Sin nombre"}</span>
+        <span class="mui-pill" style="color:${pillColor}; background:${pillBg}; font-size:0.7rem;">
+          ${estadoTexto}
         </span>
-      </div>
-      <div class="mui-main-subtitle">
-        Tel: ${data.telefono || "—"}
       </div>
       ${
         data.notas 
-        ? `<div class="mui-main-meta" style="margin-top:0.3rem;">Nota: ${data.notas}</div>` 
+        ? `<div style="font-size:0.8rem; color:var(--text-muted); margin-top:0.25rem;">${data.notas}</div>` 
         : ''
       }
     `;
     tr.appendChild(tdMain);
 
-    // -- Columna Detalles --
+    // Columna 2: Detalles
     const tdDetails = document.createElement("td");
     tdDetails.innerHTML = `
-      <div class="mui-main-meta" style="font-size:0.9rem; color:#333;">
-        Sueldo: $${sueldo.toFixed(2)}
+      <div style="font-size:0.9rem;">
+        <div style="display:flex; align-items:center; gap:0.4rem; color:var(--text-muted); margin-bottom:0.25rem;">
+          <span class="material-symbols-outlined" style="font-size:16px;">call</span>
+          ${data.telefono || "—"}
+        </div>
+        <div style="display:flex; align-items:center; gap:0.4rem; font-weight:500; color:var(--text-main);">
+          <span class="material-symbols-outlined" style="font-size:16px; color:var(--success);">payments</span>
+          $${sueldo.toFixed(2)}
+        </div>
       </div>
     `;
     tr.appendChild(tdDetails);
 
-    // -- Columna Acciones --
+    // Columna 3: Acciones
     const tdActions = document.createElement("td");
-    tdActions.className = "mui-col-actions";
     tdActions.style.textAlign = "right";
+    tdActions.style.whiteSpace = "nowrap";
 
-    // Botón Activar/Desactivar
+    // Botón Toggle (Activar/Desactivar)
     const toggleBtn = document.createElement("button");
     toggleBtn.type = "button";
-    toggleBtn.className = "btn btn-xs " + (data.activo ? "btn-outline" : "btn-success");
-    toggleBtn.title = data.activo ? "Desactivar personal" : "Activar personal";
+    toggleBtn.className = "icon-button";
+    toggleBtn.title = isActive ? "Desactivar" : "Activar";
     toggleBtn.innerHTML = `
-      <span class="material-symbols-outlined">
-        ${data.activo ? "block" : "check_circle"}
+      <span class="material-symbols-outlined" style="color: ${isActive ? 'var(--text-muted)' : 'var(--success)'}">
+        ${isActive ? "toggle_on" : "toggle_off"}
       </span>
     `;
     toggleBtn.addEventListener("click", async (e) => {
       e.stopPropagation();
-      const staffRef = doc(db, "staff", id);
-      await updateDoc(staffRef, { activo: !data.activo });
-      await cargarPersonalEdificio(buildingId);
+      try {
+        await updateDoc(doc(db, "staff", id), { activo: !isActive });
+        cargarPersonalEdificio(buildingId); // Recargar
+      } catch (err) {
+        console.error(err);
+        alert("Error al actualizar estado.");
+      }
     });
 
     // Botón Editar
     const editBtn = document.createElement("button");
     editBtn.type = "button";
-    editBtn.className = "btn btn-xs btn-info";
-    editBtn.innerHTML = `
-      <span class="material-symbols-outlined">edit</span>
-      <span class="btn-label">Editar</span>
-    `;
+    editBtn.className = "icon-button";
+    editBtn.title = "Editar";
+    editBtn.innerHTML = `<span class="material-symbols-outlined">edit</span>`;
     editBtn.addEventListener("click", (e) => {
       e.stopPropagation();
       abrirStaffModal({
@@ -262,65 +262,74 @@ async function cargarPersonalEdificio(buildingId) {
     // Botón Eliminar
     const deleteBtn = document.createElement("button");
     deleteBtn.type = "button";
-    deleteBtn.className = "btn btn-xs btn-danger";
-    deleteBtn.title = "Eliminar registro";
-    deleteBtn.innerHTML = `
-      <span class="material-symbols-outlined">delete</span>
-    `;
+    deleteBtn.className = "icon-button";
+    deleteBtn.title = "Eliminar";
+    deleteBtn.innerHTML = `<span class="material-symbols-outlined" style="color:var(--danger);">delete</span>`;
     deleteBtn.addEventListener("click", async (e) => {
       e.stopPropagation();
-      const ok = confirm(`¿Eliminar a ${data.nombre} del registro?`);
-      if (!ok) return;
-      await deleteDoc(doc(db, "staff", id));
-      await cargarPersonalEdificio(buildingId);
+      if(confirm(`¿Eliminar a ${data.nombre} permanentemente?`)){
+        try {
+          await deleteDoc(doc(db, "staff", id));
+          cargarPersonalEdificio(buildingId);
+        } catch (err) {
+          console.error(err);
+          alert("Error al eliminar.");
+        }
+      }
     });
 
     tdActions.appendChild(toggleBtn);
     tdActions.appendChild(editBtn);
     tdActions.appendChild(deleteBtn);
-
     tr.appendChild(tdActions);
     tbody.appendChild(tr);
 
-    // -- Lógica para lista de solo lectura (Unidades) --
+    // -- Lógica para lista COMPACTA (solo lectura) en Tab Unidades --
     if (unitsStaffList) {
-      const li2 = document.createElement("li");
-      li2.textContent = `${data.nombre} (${estadoLabel}) - Tel: ${data.telefono || "—"}`;
-      unitsStaffList.appendChild(li2);
+      const li = document.createElement("li");
+      li.style.display = "flex";
+      li.style.justifyContent = "space-between";
+      li.style.alignItems = "center";
+      
+      const phoneLink = data.telefono 
+        ? `<a href="tel:${data.telefono}" style="text-decoration:none; color:var(--primary); font-size:0.8rem; display:flex; gap:0.2rem; align-items:center;"><span class="material-symbols-outlined" style="font-size:14px;">call</span>Llamar</a>` 
+        : '';
+
+      li.innerHTML = `
+        <div style="display:flex; flex-direction:column;">
+          <span style="font-weight:500;">${data.nombre}</span>
+          <span style="font-size:0.75rem; color:${isActive?'var(--success)':'var(--text-muted)'};">${isActive?'Disponible':'No disponible'}</span>
+        </div>
+        ${phoneLink}
+      `;
+      unitsStaffList.appendChild(li);
     }
 
-    if (data.activo) {
+    if (isActive) {
       nombresActivos.push(data.nombre || "Sin nombre");
     }
   });
 
   table.appendChild(tbody);
-  
-  if (staffGridContainer) {
-    staffGridContainer.appendChild(table);
-  }
+  if (staffGridContainer) staffGridContainer.appendChild(table);
 
   actualizarResumenStaff(total, nombresActivos);
 }
 
 // =======================================================
-//  Modal de personal (Funciones de abrir/cerrar/guardar)
+//  MODAL: ABRIR / CERRAR / GUARDAR
 // =======================================================
 function abrirStaffModal(opciones = {}) {
   if (!staffModal || !staffModalForm) return;
 
   const { buildingId, buildingNombre, staffId, data } = opciones;
 
-  if (buildingId) {
-    if (currentBuildingHidden) {
-      currentBuildingHidden.value = buildingId;
-      currentBuildingHidden.dispatchEvent(new Event("change"));
-    }
-    if (staffBuildingLabel) {
-      staffBuildingLabel.textContent = buildingNombre || "Ninguno";
-    }
+  // Sincronizar campo oculto si viene el ID
+  if (buildingId && currentBuildingHidden) {
+    currentBuildingHidden.value = buildingId;
   }
 
+  // Llenar campos
   staffModalIdInput.value = staffId || "";
   staffModalNameInput.value = data?.nombre || "";
   staffModalPhoneInput.value = data?.telefono || "";
@@ -328,8 +337,10 @@ function abrirStaffModal(opciones = {}) {
   staffModalNotesInput.value = data?.notas || "";
   staffModalActiveSelect.value = data?.activo === false ? "false" : "true";
 
-  staffModalBuildingNameLabel.textContent =
-    buildingNombre || staffBuildingLabel?.textContent || "Ninguno";
+  // Título del modal
+  if (staffModalBuildingNameLabel) {
+    staffModalBuildingNameLabel.textContent = buildingNombre || staffBuildingLabel?.textContent || "Inmueble Actual";
+  }
 
   staffModal.classList.add("visible");
 }
@@ -339,6 +350,7 @@ function cerrarStaffModal() {
   staffModal.classList.remove("visible");
 }
 
+// Event Listeners Modal
 if (staffModalCloseBtn) staffModalCloseBtn.addEventListener("click", cerrarStaffModal);
 if (staffModalCancelBtn) staffModalCancelBtn.addEventListener("click", cerrarStaffModal);
 
@@ -347,10 +359,11 @@ if (staffModalForm) {
     e.preventDefault();
 
     const buildingId = currentBuildingHidden?.value || "";
+    // Intentar recuperar nombre del label si no tenemos otro origen
     const buildingNombre = staffBuildingLabel?.textContent || "";
 
     if (!buildingId) {
-      alert("Primero selecciona un inmueble para registrar personal.");
+      alert("Error: No se ha identificado el inmueble.");
       return;
     }
 
@@ -362,44 +375,48 @@ if (staffModalForm) {
     const activo = staffModalActiveSelect.value === "true";
 
     if (!nombre) {
-      alert("El nombre del personal es obligatorio.");
+      alert("El nombre es obligatorio.");
       return;
     }
 
     const sueldo = sueldoRaw !== "" && !isNaN(Number(sueldoRaw)) ? Number(sueldoRaw) : 0;
-    
-    // Validación de sueldo negativo
     if (sueldo < 0) {
       alert("El sueldo no puede ser negativo.");
       return;
     }
 
-    if (staffId) {
-      const staffRef = doc(db, "staff", staffId);
-      await updateDoc(staffRef, { nombre, telefono, notas, sueldo, activo });
-    } else {
-      await addDoc(collection(db, "staff"), {
-        buildingId,
-        buildingNombre,
-        nombre,
-        telefono,
-        notas,
-        sueldo,
-        activo,
-        creadoEn: new Date()
-      });
+    try {
+      if (staffId) {
+        // Editar
+        const staffRef = doc(db, "staff", staffId);
+        await updateDoc(staffRef, { nombre, telefono, notas, sueldo, activo });
+      } else {
+        // Crear
+        await addDoc(collection(db, "staff"), {
+          buildingId,
+          buildingNombre,
+          nombre,
+          telefono,
+          notas,
+          sueldo,
+          activo,
+          creadoEn: new Date()
+        });
+      }
+      cerrarStaffModal();
+      await cargarPersonalEdificio(buildingId);
+    } catch (error) {
+      console.error("Error guardando personal:", error);
+      alert("Hubo un error al guardar. Revisa la consola.");
     }
-
-    cerrarStaffModal();
-    await cargarPersonalEdificio(buildingId);
   });
 }
 
 // =======================================================
-//  Sincronización y Eventos
+//  EVENTS & INIT
 // =======================================================
 
-// Escuchar cambio de edificio en app.js
+// 1. Escuchar cambio de ID en el input oculto (comunicación con app.js)
 if (currentBuildingHidden) {
   currentBuildingHidden.addEventListener("change", () => {
     const buildingId = currentBuildingHidden.value || "";
@@ -407,29 +424,28 @@ if (currentBuildingHidden) {
   });
 }
 
-// Evento "Nuevo Personal" desde el botón del inmueble
+// 2. Evento personalizado "Nuevo Personal" (disparado desde el botón en la tabla de edificios)
 window.addEventListener("openStaffModalForBuilding", (event) => {
   const detail = event.detail || {};
   const buildingId = detail.buildingId || "";
   const buildingNombre = detail.buildingNombre || "";
 
   if (!buildingId) {
-    alert("No se encontró el inmueble para registrar personal.");
+    alert("No se encontró el inmueble.");
     return;
   }
   abrirStaffModal({ buildingId, buildingNombre });
 });
 
-// =======================================================
-//  INIT
-// =======================================================
+// 3. Inicializar al cargar
 function init() {
   initStaffUI();
-  initUnitsStaffBlock();
-
+  
+  // Si al cargar la página ya hay un ID (ej. persistencia), cargamos datos
   if (currentBuildingHidden && currentBuildingHidden.value) {
     cargarPersonalEdificio(currentBuildingHidden.value);
   }
 }
 
+// Arrancar módulo
 init();
