@@ -130,8 +130,7 @@
             <div class="summary-divider"></div>
 
             <div class="summary-item"><strong>Ubicación:</strong> <span id="summary-maps-url" class="text-truncate">—</span></div>
-            <div class="summary-item"><strong>Personal (cant):</strong> <span id="summary-staff-count">—</span></div>
-            <div class="summary-item full-row"><strong>Personal (nombres):</strong> <span id="summary-staff-names">—</span></div>
+            <div class="summary-item full-row"><strong>Nota:</strong> <span class="hint" style="font-size:0.75rem;">Para ver el personal, selecciona un inmueble en la lista inferior.</span></div>
           </div>
         </section>
 
@@ -164,14 +163,16 @@
 
           <div id="building-grid" class="mui-data-grid"></div>
         </section>
-
         <section id="staff-section-edificios" class="dashboard-card">
           <div class="section-header">
             <h2>Personal Asignado</h2>
+            <button type="button" id="btn-add-staff" class="btn btn-primary btn-xs">
+              <span class="material-symbols-outlined">add</span> Nuevo Personal
+            </button>
           </div>
+          
           <p class="hint">
             Gestión de conserjes o seguridad para: <strong id="staff-building-label" class="highlight-text">Ninguno</strong>
-            (Unidad: <strong id="staff-unit-label">Ninguna</strong>)
           </p>
 
           <input type="hidden" id="current-building-id" />
@@ -345,6 +346,7 @@
 
         <div class="receipts-layout">
           <div class="side-panel-receipts">
+            
             <div class="context-card dashboard-card">
               <h3 class="card-icon-title">
                 <span class="material-symbols-outlined">person</span> Inquilino Activo
@@ -501,10 +503,17 @@
             <div class="grid-2-col">
                 <label>Cód. Agua <input type="text" id="building-water-code" /></label>
                 <label>Cód. Gas <input type="text" id="building-gas-code" /></label>
-                <label>Cód. Internet <input type="text" id="building-internet-code" /></label>
-                <label>Prov. Internet <input type="text" id="building-internet-company" /></label>
-                <label>Precio Internet <input type="number" step="0.01" id="building-internet-price" /></label>
             </div>
+
+            <div class="form-section-title" style="display:flex; justify-content:space-between; align-items:center;">
+                <span>Conexiones Internet</span>
+                <button type="button" id="btn-add-internet" class="btn btn-outline btn-xs" style="padding:0.2rem 0.5rem;">
+                   <span class="material-symbols-outlined" style="font-size:16px;">add</span> Agregar
+                </button>
+            </div>
+            
+            <div id="internet-list-container" class="dynamic-list-container">
+               </div>
 
             <div class="form-section-title">Mapa</div>
             <label class="full-width">
@@ -538,11 +547,22 @@
 
         <form id="building-services-form" class="modal-body-grid">
           <input type="hidden" id="modal-building-id" />
+          
+          <div class="form-section-title">Medidores Básicos</div>
           <label>Cód. Agua <input type="text" id="modal-water-code" /></label>
           <label>Cód. Gas <input type="text" id="modal-gas-code" /></label>
-          <label>Cód. Internet <input type="text" id="modal-internet-code" /></label>
-          <label>Empresa Internet <input type="text" id="modal-internet-company" /></label>
-          <label>Precio Internet <input type="number" step="0.01" id="modal-internet-price" /></label>
+
+          <div class="grid-span-all">
+             <div class="form-section-title" style="display:flex; justify-content:space-between; align-items:center; margin-top:1rem;">
+                <span>Conexiones Internet</span>
+                <button type="button" id="btn-add-internet-services" class="btn btn-outline btn-xs" style="padding:0.2rem 0.5rem;">
+                   <span class="material-symbols-outlined" style="font-size:16px;">add</span> Agregar
+                </button>
+             </div>
+             
+             <div id="internet-list-services" class="dynamic-list-container">
+                </div>
+          </div>
 
           <div class="modal-footer full-width">
             <button type="button" class="btn btn-outline" id="building-services-cancel">Cancelar</button>
