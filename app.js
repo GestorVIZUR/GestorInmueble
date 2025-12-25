@@ -16,7 +16,8 @@ import {
   doc,
   updateDoc,
   deleteDoc,
-  orderBy
+  orderBy,
+  limit
 } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js";
 
 // jsPDF viene del script UMD incluido en index.html
@@ -48,7 +49,6 @@ const btnLogout = document.getElementById("btn-logout");
 // Escuchar cambios de estado (Login / Logout)
 onAuthStateChanged(auth, async (user) => {
   if (user) {
-    // === USUARIO CONECTADO ===
     if (loginScreen) {
       loginScreen.style.opacity = "0";
       setTimeout(() => loginScreen.classList.add("hidden"), 300);
@@ -56,11 +56,8 @@ onAuthStateChanged(auth, async (user) => {
     if (appContent) {
       appContent.classList.remove("hidden");
     }
-
-    // CARGA INICIAL INMEDIATA
     await init(); 
   } else {
-    // === USUARIO DESCONECTADO ===
     if (loginScreen) {
       loginScreen.classList.remove("hidden");
       loginScreen.style.opacity = "1";
@@ -74,12 +71,8 @@ if (loginForm) {
   loginForm.addEventListener("submit", async (e) => {
     e.preventDefault();
     if (loginError) loginError.style.display = "none";
-    
-    const email = loginEmail.value;
-    const password = loginPassword.value;
-
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      await signInWithEmailAndPassword(auth, loginEmail.value, loginPassword.value);
     } catch (error) {
       console.error("Error login:", error);
       if (loginError) {
@@ -156,10 +149,12 @@ const buildingTypeSelect = document.getElementById("building-type");
 const buildingAddressInput = document.getElementById("building-address");
 const buildingWaterCodeInput = document.getElementById("building-water-code");
 const buildingGasCodeInput = document.getElementById("building-gas-code");
-const buildingInternetCodeInput = document.getElementById("building-internet-code");
-const buildingInternetCompanyInput = document.getElementById("building-internet-company");
-const buildingInternetPriceInput = document.getElementById("building-internet-price");
+// Mantenemos ref antigua solo por si acaso
 const buildingMapsUrlInput = document.getElementById("building-maps-url");
+
+// INTERNET DINÁMICO (Formulario Principal)
+const internetListContainer = document.getElementById("internet-list-container");
+const btnAddInternet = document.getElementById("btn-add-internet");
 
 const buildingGrid = document.getElementById("building-grid");
 const buildingSearchInput = document.getElementById("building-search");
@@ -249,9 +244,10 @@ const modalBuildingIdInput = document.getElementById("modal-building-id");
 const modalBuildingNameLabel = document.getElementById("modal-building-name");
 const modalWaterCodeInput = document.getElementById("modal-water-code");
 const modalGasCodeInput = document.getElementById("modal-gas-code");
-const modalInternetCodeInput = document.getElementById("modal-internet-code");
-const modalInternetCompanyInput = document.getElementById("modal-internet-company");
-const modalInternetPriceInput = document.getElementById("modal-internet-price");
+// INTERNET DINÁMICO (Modal Servicios)
+const internetListServices = document.getElementById("internet-list-services");
+const btnAddInternetServices = document.getElementById("btn-add-internet-services");
+
 const buildingServicesCloseBtn = document.getElementById("building-services-close");
 const buildingServicesCancelBtn = document.getElementById("building-services-cancel");
 
@@ -341,20 +337,16 @@ function resetTenantForm() {
   }
 }
 
-// ========================= MAPAS (CORREGIDO) =========================
+// ========================= MAPAS =========================
 function buildEmbedMapUrlFromInput(input) {
   const trimmed = input.trim();
-  // Detectar si son coordenadas (ej: -17.821, -63.176)
   const coordMatch = trimmed.match(/^(-?\d+(\.\d+)?),\s*(-?\d+(\.\d+)?)$/);
   
   if (coordMatch) {
     const lat = coordMatch[1];
     const lng = coordMatch[3];
-    // URL estándar de Google Maps Embed
     return `https://maps.google.com/maps?q=${lat},${lng}&z=15&output=embed`;
   }
-  
-  // URL estándar para búsquedas por texto
   return `https://maps.google.com/maps?q=${encodeURIComponent(trimmed)}&z=15&output=embed`;
 }
 
@@ -370,11 +362,9 @@ function updateMapPreview(value) {
   }
   
   if(mapExternalLink) {
-    // Enlace externo
     mapExternalLink.href = trimmed.startsWith("http") 
       ? trimmed 
       : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(trimmed)}`;
-      
     mapExternalLink.classList.remove("hidden");
   }
   
@@ -384,10 +374,58 @@ function updateMapPreview(value) {
   if(mapPreviewHint) mapPreviewHint.textContent = "Vista previa cargada.";
 }
 
+// ========================= LOGICA INTERNET DINÁMICO =========================
+if (btnAddInternet) {
+  btnAddInternet.addEventListener("click", () => renderInternetRow({}, "internet-list-container"));
+}
+if (btnAddInternetServices) {
+  btnAddInternetServices.addEventListener("click", () => renderInternetRow({}, "internet-list-services"));
+}
+
+function renderInternetRow(data = {}, containerId) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+
+  const div = document.createElement("div");
+  div.className = "internet-row";
+  
+  div.innerHTML = `
+    <input type="text" class="int-company" placeholder="Empresa" value="${data.empresa || ''}">
+    <input type="text" class="int-code" placeholder="Código / ID" value="${data.codigo || ''}">
+    <input type="number" class="int-price" placeholder="Costo" value="${data.precio || ''}">
+    <button type="button" class="btn-remove-row"><span class="material-symbols-outlined">delete</span></button>
+  `;
+
+  div.querySelector(".btn-remove-row").addEventListener("click", () => div.remove());
+  container.appendChild(div);
+}
+
+function getInternetDataFromContainer(containerId) {
+  const container = document.getElementById(containerId);
+  if (!container) return [];
+
+  const rows = container.querySelectorAll(".internet-row");
+  const services = [];
+  rows.forEach(row => {
+    const empresa = row.querySelector(".int-company").value.trim();
+    const codigo = row.querySelector(".int-code").value.trim();
+    const precio = row.querySelector(".int-price").value;
+    if (empresa || codigo) {
+      services.push({ empresa, codigo, precio });
+    }
+  });
+  return services;
+}
+
 // ========================= MODALES (Lógica) =========================
 function openBuildingModal() {
   buildingForm.reset();
   if (buildingIdHiddenInput) buildingIdHiddenInput.value = "";
+  
+  // Reset lista internet
+  if(internetListContainer) internetListContainer.innerHTML = "";
+  renderInternetRow({}, "internet-list-container"); 
+  
   if (buildingExtraFieldsDiv) buildingExtraFieldsDiv.style.display = "contents"; 
   const titleEl = buildingModal.querySelector("h3");
   if(titleEl) titleEl.textContent = "Registrar Inmueble";
@@ -399,7 +437,26 @@ function abrirModalEditarEdificio(id, data) {
   buildingNameInput.value = data.nombre || "";
   buildingTypeSelect.value = data.tipo || "edificio";
   buildingAddressInput.value = data.direccion || "";
-  if (buildingExtraFieldsDiv) buildingExtraFieldsDiv.style.display = "none";
+  buildingWaterCodeInput.value = data.codigoAgua || "";
+  buildingGasCodeInput.value = data.codigoGas || "";
+  buildingMapsUrlInput.value = data.mapsUrl || "";
+
+  if(internetListContainer) internetListContainer.innerHTML = "";
+  if (data.internetServices && Array.isArray(data.internetServices)) {
+    data.internetServices.forEach(srv => renderInternetRow(srv, "internet-list-container"));
+  } else {
+    if (data.empresaInternet || data.codigoInternet) {
+        renderInternetRow({ 
+            empresa: data.empresaInternet, 
+            codigo: data.codigoInternet, 
+            precio: data.internetPrice 
+        }, "internet-list-container");
+    } else {
+        renderInternetRow({}, "internet-list-container");
+    }
+  }
+
+  if (buildingExtraFieldsDiv) buildingExtraFieldsDiv.style.display = "contents";
   const titleEl = buildingModal.querySelector("h3");
   if(titleEl) titleEl.textContent = "Editar Información";
   buildingModal.classList.add("visible");
@@ -415,9 +472,22 @@ function openBuildingServicesModal(buildingId, data) {
   modalBuildingNameLabel.textContent = data?.nombre || "";
   modalWaterCodeInput.value = data?.codigoAgua || "";
   modalGasCodeInput.value = data?.codigoGas || "";
-  modalInternetCodeInput.value = data?.codigoInternet || "";
-  modalInternetCompanyInput.value = data?.empresaInternet || "";
-  modalInternetPriceInput.value = data?.internetPrice || "";
+  
+  if(internetListServices) internetListServices.innerHTML = "";
+  if (data.internetServices && Array.isArray(data.internetServices)) {
+    data.internetServices.forEach(srv => renderInternetRow(srv, "internet-list-services"));
+  } else {
+    if (data.empresaInternet || data.codigoInternet) {
+        renderInternetRow({ 
+            empresa: data.empresaInternet, 
+            codigo: data.codigoInternet, 
+            precio: data.internetPrice 
+        }, "internet-list-services");
+    } else {
+        renderInternetRow({}, "internet-list-services");
+    }
+  }
+  
   buildingServicesModal.classList.add("visible");
 }
 function closeServices() { buildingServicesModal.classList.remove("visible"); }
@@ -455,7 +525,7 @@ if (openUnitModalBtn) openUnitModalBtn.addEventListener("click", () => {
   openUnitModal(null, {});
 });
 
-// ========================= DATA GRID (Inmuebles) =========================
+// ========================= DATA GRID =========================
 function renderBuildingGrid() {
   if (!buildingGrid) return;
   buildingGrid.innerHTML = "";
@@ -500,7 +570,9 @@ function renderBuildingGrid() {
     const icons = [];
     if (b.codigoAgua) icons.push(`<span class="material-symbols-outlined" style="font-size:16px;" title="Agua">water_drop</span>`);
     if (b.codigoGas) icons.push(`<span class="material-symbols-outlined" style="font-size:16px;" title="Gas">propane</span>`);
-    if (b.codigoInternet) icons.push(`<span class="material-symbols-outlined" style="font-size:16px;" title="Internet">wifi</span>`);
+    if ((b.internetServices && b.internetServices.length > 0) || b.codigoInternet) {
+        icons.push(`<span class="material-symbols-outlined" style="font-size:16px;" title="Internet">wifi</span>`);
+    }
     if (b.mapsUrl) icons.push(`<span class="material-symbols-outlined" style="font-size:16px;" title="Mapa">pin_drop</span>`);
     
     td2.innerHTML = `<div style="display:flex; gap:0.5rem; color:var(--text-muted);">${icons.join("") || "<small>Sin servicios</small>"}</div>`;
@@ -514,12 +586,8 @@ function renderBuildingGrid() {
       </div>
     `;
 
-    // --- EVENTOS DE CLICK Y NAVEGACIÓN ---
-    
-    // 1. Click en la FILA -> Ir a Unidades
     tr.addEventListener("click", () => seleccionarEdificio(b.id, b, { irAUnidades: true }));
 
-    // 2. Botones (sin activar el click de la fila)
     td3.querySelector(".btn-edit").addEventListener("click", (e) => {
       e.stopPropagation(); abrirModalEditarEdificio(b.id, b);
     });
@@ -553,7 +621,6 @@ async function cargarEdificios() {
         buildingSearchOptions.appendChild(opt);
       });
     }
-    // IMPORTANTE: Llamar aquí para pintar la tabla inmediatamente
     aplicarFiltroEdificios();
   } catch (error) {
     console.error("Error cargando edificios:", error);
@@ -572,20 +639,20 @@ if (buildingSearchInput) buildingSearchInput.addEventListener("input", aplicarFi
 if (buildingForm) buildingForm.addEventListener("submit", async (e) => {
   e.preventDefault();
   const id = buildingIdHiddenInput.value;
+  const internetServices = getInternetDataFromContainer("internet-list-container");
+
   const data = {
     nombre: buildingNameInput.value.trim(),
     tipo: buildingTypeSelect.value,
-    direccion: buildingAddressInput.value.trim()
+    direccion: buildingAddressInput.value.trim(),
+    codigoAgua: buildingWaterCodeInput.value,
+    codigoGas: buildingGasCodeInput.value,
+    mapsUrl: buildingMapsUrlInput.value,
+    internetServices: internetServices 
   };
 
   if (!id) {
     data.creadoEn = new Date();
-    data.codigoAgua = buildingWaterCodeInput.value;
-    data.codigoGas = buildingGasCodeInput.value;
-    data.codigoInternet = buildingInternetCodeInput.value;
-    data.empresaInternet = buildingInternetCompanyInput.value;
-    data.internetPrice = buildingInternetPriceInput.value;
-    data.mapsUrl = buildingMapsUrlInput.value;
     await addDoc(collection(db, "buildings"), data);
   } else {
     await updateDoc(doc(db, "buildings", id), data);
@@ -598,19 +665,22 @@ if (buildingForm) buildingForm.addEventListener("submit", async (e) => {
   cargarEdificios();
 });
 
-// Guardar Servicios
+// Guardar Servicios (Modal Rápido)
 if (buildingServicesForm) buildingServicesForm.addEventListener("submit", async (e) => {
   e.preventDefault();
   const id = modalBuildingIdInput.value;
+  const internetServices = getInternetDataFromContainer("internet-list-services");
+
   const data = {
     codigoAgua: modalWaterCodeInput.value,
     codigoGas: modalGasCodeInput.value,
-    codigoInternet: modalInternetCodeInput.value,
-    empresaInternet: modalInternetCompanyInput.value,
-    internetPrice: modalInternetPriceInput.value
+    internetServices: internetServices
   };
   await updateDoc(doc(db, "buildings", id), data);
-  if (selectedBuildingId === id) { Object.assign(selectedBuildingData, data); actualizarResumenEdificio(); }
+  if (selectedBuildingId === id) { 
+      Object.assign(selectedBuildingData, data); 
+      actualizarResumenEdificio(); 
+  }
   closeServices();
 });
 
@@ -655,26 +725,43 @@ function actualizarResumenEdificio() {
   if (summaryBuildingAddress) summaryBuildingAddress.textContent = d.direccion;
   if (summaryWaterCode) summaryWaterCode.textContent = d.codigoAgua || "—";
   if (summaryGasCode) summaryGasCode.textContent = d.codigoGas || "—";
-  if (summaryInternetCode) summaryInternetCode.textContent = d.codigoInternet || "—";
-  if (summaryInternetCompany) summaryInternetCompany.textContent = d.empresaInternet || "—";
-  if (summaryInternetPrice) summaryInternetPrice.textContent = d.internetPrice ? `$${d.internetPrice}` : "—";
   
-  // Truncar visualmente
+  const services = d.internetServices || [];
+  if (services.length === 0 && (d.codigoInternet || d.empresaInternet)) {
+      services.push({ empresa: d.empresaInternet, codigo: d.codigoInternet, precio: d.internetPrice });
+  }
+
+  if (services.length > 0) {
+      const s1 = services[0];
+      if (summaryInternetCode) summaryInternetCode.textContent = s1.codigo || "—";
+      if (summaryInternetCompany) summaryInternetCompany.textContent = s1.empresa || "—";
+      if (summaryInternetPrice) summaryInternetPrice.textContent = s1.precio ? `Bs. ${s1.precio} ${services.length > 1 ? `(+${services.length-1})` : ''}` : "—";
+  } else {
+      if (summaryInternetCode) summaryInternetCode.textContent = "—";
+      if (summaryInternetCompany) summaryInternetCompany.textContent = "—";
+      if (summaryInternetPrice) summaryInternetPrice.textContent = "—";
+  }
+  
   if (summaryMapsUrl) {
     summaryMapsUrl.textContent = d.mapsUrl || "Sin mapa";
-    summaryMapsUrl.title = d.mapsUrl || ""; // Tooltip con texto completo
+    summaryMapsUrl.title = d.mapsUrl || ""; 
   }
 
   if (selectedBuildingLabel) selectedBuildingLabel.textContent = d.nombre;
   if (invoiceBuildingLabel) invoiceBuildingLabel.textContent = d.nombre;
 
-  // Contexto en Unidades
   if (unitsSummaryBuildingType) unitsSummaryBuildingType.textContent = d.tipo;
   if (unitsSummaryBuildingAddress) unitsSummaryBuildingAddress.textContent = d.direccion;
-  if (unitsSummaryInternetCode) unitsSummaryInternetCode.textContent = d.codigoInternet || "—";
-  if (unitsSummaryInternetCompany) unitsSummaryInternetCompany.textContent = d.empresaInternet || "—";
+  
+  if (unitsSummaryInternetCode) {
+      const s = services.length > 0 ? services[0] : {};
+      unitsSummaryInternetCode.textContent = s.codigo || "—";
+  }
+  if (unitsSummaryInternetCompany) {
+      const s = services.length > 0 ? services[0] : {};
+      unitsSummaryInternetCompany.textContent = s.empresa || "—";
+  }
 
-  // ACTUALIZAR CÓDIGOS DE AGUA Y GAS EN UNIDADES
   if (unitsSummaryWaterCode) unitsSummaryWaterCode.textContent = d.codigoAgua || "—";
   if (unitsSummaryGasCode) unitsSummaryGasCode.textContent = d.codigoGas || "—";
 }
@@ -723,7 +810,6 @@ async function cargarUnidades(buildingId) {
       </div>
     `;
 
-    // CLICK EN FILA -> IR A INQUILINOS
     li.addEventListener("click", () => seleccionarUnidad(data.id, data, true));
 
     li.querySelector(".btn-edit").addEventListener("click", (e) => {
@@ -741,7 +827,6 @@ function seleccionarUnidad(id, data, irTab = false) {
   if (selectedUnitLabel) selectedUnitLabel.textContent = data.nombre;
   if (invoiceUnitLabel) invoiceUnitLabel.textContent = data.nombre;
 
-  // Limpiar selección previa
   activeTenantId = null;
   updateReceiptContext(null);
 
@@ -766,11 +851,9 @@ if (unitModalForm) unitModalForm.addEventListener("submit", async (e) => {
   cargarUnidades(selectedBuildingId);
 });
 
-// ========================= INQUILINOS (Lógica Renovada) =========================
-// ========================= INQUILINOS (CORREGIDO) =========================
+// ========================= INQUILINOS =========================
 async function cargarInquilinos(unitId) {
   tenantList.innerHTML = "";
-  // Resetear formulario y estado al cargar para evitar mezclas
   resetTenantForm(); 
   unitHasActiveTenant = false; 
 
@@ -789,7 +872,6 @@ async function cargarInquilinos(unitId) {
   let activeFound = null;
 
   docs.forEach((data) => {
-    // Detectar si hay uno activo para bloquear nuevos registros
     if (data.activo) {
         unitHasActiveTenant = true;
         activeFound = { id: data.id, ...data };
@@ -798,7 +880,6 @@ async function cargarInquilinos(unitId) {
     const li = document.createElement("li");
     const isActive = data.activo;
     
-    // Estilos visuales
     const badgeStyle = isActive
       ? "background:var(--success-bg); color:var(--success);"
       : "background:var(--bg-body); color:var(--text-muted);";
@@ -808,7 +889,7 @@ async function cargarInquilinos(unitId) {
         <strong>${data.nombre}</strong>
         <div style="margin-top:0.2rem;">
           <span class="mui-pill" style="${badgeStyle}; font-size:0.7rem;">${isActive ? "ACTIVO" : "HISTÓRICO"}</span>
-          <span style="margin-left:0.5rem; font-size:0.85rem;">$${Number(data.montoAlquiler).toFixed(2)}</span>
+          <span style="margin-left:0.5rem; font-size:0.85rem;">Bs. ${Number(data.montoAlquiler).toFixed(2)}</span>
         </div>
       </div>
       
@@ -821,23 +902,18 @@ async function cargarInquilinos(unitId) {
       </div>
     `;
 
-    // 1. EVENTO CLIC EN LA FILA -> AUTOCOMPLETAR (SIN REDIRECCIÓN)
-    // Al hacer clic en el texto/nombre, llenamos el formulario pero NOS QUEDAMOS AQUI.
     const itemMain = li.querySelector(".item-main");
     itemMain.addEventListener("click", () => {
       llenarFormularioInquilino(data.id, data);
-      // Activamos el contexto global, pero pasamos 'false' para no cambiar de pestaña
       if (isActive) activarInquilino(data.id, data, false); 
     });
 
-    // 2. EVENTO BOTÓN RECIBOS -> IR A PESTAÑA RECIBOS
     const btnReceipts = li.querySelector(".btn-goto-receipts");
     btnReceipts.addEventListener("click", (e) => {
-      e.stopPropagation(); // Evitar que dispare el autocompletado también
-      activarInquilino(data.id, data, true); // 'true' = Lléame a la pestaña recibos
+      e.stopPropagation(); 
+      activarInquilino(data.id, data, true);
     });
 
-    // 3. EVENTO BOTÓN FINALIZAR
     if (isActive) {
       li.querySelector(".btn-rescindir").addEventListener("click", (e) => {
         e.stopPropagation(); 
@@ -848,7 +924,6 @@ async function cargarInquilinos(unitId) {
     tenantList.appendChild(li);
   });
 
-  // Si encontramos uno activo, cargamos sus datos en segundo plano por si el usuario cambia de pestaña manualmente
   if (activeFound) {
     activarInquilino(activeFound.id, activeFound, false);
   } else {
@@ -878,7 +953,7 @@ async function rescindirContrato(id, unitId) {
   cargarUnidades(selectedBuildingId);
 }
 
-// LÓGICA DE GUARDAR / ACTUALIZAR INQUILINO
+// LÓGICA DE GUARDAR INQUILINO
 if (tenantForm) tenantForm.addEventListener("submit", async (e) => {
   e.preventDefault();
   if (!selectedUnitId) return alert("Selecciona unidad.");
@@ -898,26 +973,19 @@ if (tenantForm) tenantForm.addEventListener("submit", async (e) => {
 
   try {
     if (editingTenantId) {
-      // === MODO EDICIÓN (ACTUALIZAR EXISTENTE) ===
       await updateDoc(doc(db, "tenants", editingTenantId), data);
       alert("Datos del inquilino actualizados.");
-      
     } else {
-      // === MODO CREACIÓN (NUEVO CONTRATO) ===
-      
-      // VALIDACIÓN: Si ya hay uno activo, NO PERMITIR crear otro
       if (unitHasActiveTenant) {
         alert("⛔ ERROR: Esta unidad ya tiene un inquilino ACTIVO.\n\nDebes finalizar el contrato actual antes de registrar uno nuevo.");
         return; 
       }
-
       data.activo = true;
       data.creadoEn = new Date();
       
       await updateDoc(doc(db, "units", selectedUnitId), { estado: "ocupado" });
       const ref = await addDoc(collection(db, "tenants"), data);
       
-      // Generar PDF solo al crear nuevo contrato
       generarPDFContratoAlquiler({ 
         numeroContrato: ref.id, 
         buildingNombre: selectedBuildingName, 
@@ -926,11 +994,9 @@ if (tenantForm) tenantForm.addEventListener("submit", async (e) => {
         ...data 
       });
     }
-
-    // Limpiar y recargar
     resetTenantForm();
-    cargarUnidades(selectedBuildingId); // Para actualizar estado de la unidad
-    cargarInquilinos(selectedUnitId);   // Recargar lista
+    cargarUnidades(selectedBuildingId); 
+    cargarInquilinos(selectedUnitId);   
 
   } catch (error) {
     console.error("Error al guardar inquilino:", error);
@@ -953,50 +1019,48 @@ function updateReceiptContext(data) {
       <div style="color:var(--text-muted); font-size:0.85rem;">Doc: ${data.documento || "—"}</div>
     </div>
   `;
-  receiptContractAmountLabel.textContent = `$${Number(data.montoAlquiler).toFixed(2)}`;
+  receiptContractAmountLabel.textContent = `Bs. ${Number(data.montoAlquiler).toFixed(2)}`;
   if (invoiceAmountInput) invoiceAmountInput.value = data.montoAlquiler;
   setInvoiceFormEnabled(true);
 }
 
-// ========================= CALENDARIO & RECIBOS (LÓGICA MEJORADA) =========================
+// Variables Calendario
+let currentDate = new Date(); 
+let currentInvoices = []; 
 
-// Variables para el calendario
-let currentDate = new Date(); // Fecha que muestra el calendario actualmente
-let currentInvoices = []; // Almacena los recibos cargados para filtrar localmente
-
-// 1. CARGAR RECIBOS DESDE FIREBASE
+// 1. CARGAR RECIBOS
 async function cargarRecibos(unitId) {
   if (!activeTenantId) return;
-  
-  // Limpiamos visualmente
   invoiceList.innerHTML = '<li style="padding:1rem;">Cargando...</li>';
   
   const q = query(
     collection(db, "invoices"),
     where("unitId", "==", unitId),
-    where("tenantId", "==", activeTenantId),
-    orderBy("creadoEn", "desc")
+    where("tenantId", "==", activeTenantId)
   );
 
   try {
     const snap = await getDocs(q);
-    currentInvoices = []; // Reiniciar cache local
+    currentInvoices = []; 
 
     if (snap.empty) {
       invoiceList.innerHTML = '<li style="justify-content:center; color:var(--text-muted);">Sin movimientos.</li>';
     } else {
-      invoiceList.innerHTML = ""; // Limpiar lista
+      invoiceList.innerHTML = ""; 
     }
 
     snap.forEach((d) => {
       const data = { id: d.id, ...d.data() };
-      currentInvoices.push(data); // Guardamos en memoria para el calendario
-      
-      // Renderizar lista lateral (Historial compacto)
-      renderInvoiceListItem(data);
+      currentInvoices.push(data);
     });
 
-    // IMPORTANTE: Una vez cargados los datos, dibujamos el calendario
+    currentInvoices.sort((a, b) => {
+        const tA = a.creadoEn && a.creadoEn.seconds ? a.creadoEn.seconds : 0;
+        const tB = b.creadoEn && b.creadoEn.seconds ? b.creadoEn.seconds : 0;
+        return tB - tA;
+    });
+
+    currentInvoices.forEach(data => renderInvoiceListItem(data));
     renderCalendar();
 
   } catch (err) {
@@ -1005,23 +1069,25 @@ async function cargarRecibos(unitId) {
   }
 }
 
-// 2. RENDERIZAR ÍTEM DE LISTA (Lateral)
+// 2. RENDERIZAR LISTA
 function renderInvoiceListItem(data) {
     const li = document.createElement("li");
     let stColor = "var(--warning)", icon = "schedule";
     if (data.estado === "pagado") { stColor = "var(--success)"; icon = "check_circle"; }
     else if (data.estado === "pendiente") { stColor = "var(--danger)"; icon = "priority_high"; }
 
+    const numDisplay = data.numero ? String(data.numero).padStart(6, '0') : "---";
+
     li.innerHTML = `
       <div class="item-main">
          <div style="display:flex; justify-content:space-between; width:100%;">
-            <strong style="font-size:0.9rem;">$${Number(data.monto).toFixed(2)}</strong>
+            <strong style="font-size:0.9rem;">Bs. ${Number(data.monto).toFixed(2)}</strong>
             <span style="color:${stColor}; font-size:0.7rem; display:flex; align-items:center; gap:0.2rem;">
               <span class="material-symbols-outlined" style="font-size:12px;">${icon}</span> ${data.estado}
             </span>
          </div>
          <div style="font-size:0.75rem; color:var(--text-muted);">
-           ${data.fechaDia}/${data.fechaMes}/${data.fechaAnio}
+           #${numDisplay} · ${data.fechaDia}/${data.fechaMes}/${data.fechaAnio}
          </div>
       </div>
       <button class="icon-button btn-pdf" style="padding:0.2rem;"><span class="material-symbols-outlined" style="font-size:18px;">print</span></button>
@@ -1030,7 +1096,7 @@ function renderInvoiceListItem(data) {
     invoiceList.appendChild(li);
 }
 
-// 3. RENDERIZAR CALENDARIO (Lógica Principal)
+// 3. RENDERIZAR CALENDARIO
 function renderCalendar() {
   const calendarBody = document.getElementById("calendar-body");
   const monthYearLabel = document.getElementById("cal-month-year");
@@ -1040,65 +1106,69 @@ function renderCalendar() {
   
   if (!calendarBody) return;
 
-  // Datos del mes actual seleccionado
   const year = currentDate.getFullYear();
-  const month = currentDate.getMonth(); // 0 = Enero
-  
-  // Nombre del mes
+  const month = currentDate.getMonth(); 
   const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
   monthYearLabel.textContent = `${monthNames[month]} ${year}`;
 
-  // Cálculos de días
-  const firstDayIndex = new Date(year, month, 1).getDay(); // Día semana del 1ro
-  const lastDay = new Date(year, month + 1, 0).getDate(); // Total días mes
+  const firstDayIndex = new Date(year, month, 1).getDay(); 
+  const lastDay = new Date(year, month + 1, 0).getDate(); 
   
   calendarBody.innerHTML = "";
 
-  // Filtros activos (Checkboxes)
   const showPaid = document.querySelector('input[data-filter="pagado"]')?.checked ?? true;
   const showPending = document.querySelector('input[data-filter="pendiente"]')?.checked ?? true;
 
-  // Variables para el Resumen Financiero del mes
-  let totalPagadoMes = 0;
-  let totalDeudaMes = 0;
-
-  // Filtrar recibos que pertenecen a ESTE mes y año
+  const alquilerContrato = activeTenantData ? Number(activeTenantData.montoAlquiler) : 0;
+  let totalPagadoReal = 0;
   const monthInvoices = currentInvoices.filter(inv => 
     parseInt(inv.fechaMes) === (month + 1) && 
     parseInt(inv.fechaAnio) === year
   );
-
-  // Calcular totales financieros
+  
   monthInvoices.forEach(inv => {
-    const monto = Number(inv.monto) || 0;
-    if (inv.estado === 'pagado') totalPagadoMes += monto;
-    else totalDeudaMes += monto; // Pendiente o parcial cuenta como deuda visual aquí
+    if (inv.estado === 'pagado' || inv.estado === 'parcial') {
+        totalPagadoReal += Number(inv.monto);
+    }
   });
 
-  // Actualizar Barra Superior Financiera
-  const alquiler = activeTenantData ? Number(activeTenantData.montoAlquiler) : 0;
-  finExpected.textContent = `$${alquiler.toFixed(0)}`;
-  finPaid.textContent = `$${totalPagadoMes.toFixed(0)}`;
-  finPending.textContent = `$${(alquiler - totalPagadoMes).toFixed(0)}`; 
+  let diferencia = alquilerContrato - totalPagadoReal;
   
-  // Color dinámico de "Pendiente": Si pagó todo, verde, si no, rojo
-  finPending.parentElement.className = (alquiler - totalPagadoMes) <= 0 ? "fin-item success" : "fin-item danger";
+  if(finExpected) finExpected.textContent = `Bs. ${alquilerContrato}`;
+  if(finPaid) finPaid.textContent = `Bs. ${totalPagadoReal}`;
+  
+  if(finPending) {
+    const container = finPending.parentElement;
+    const label = container.querySelector(".fin-label");
+    container.style.color = ""; 
 
-  // DIBUJAR GRILLA
-  
-  // Celdas vacías previas
+    if (diferencia > 0) {
+        if(label) label.textContent = "Pendiente";
+        finPending.textContent = `Bs. ${diferencia}`;
+        container.className = "fin-item danger";
+    } else if (diferencia === 0) {
+        if(label) label.textContent = "Pendiente";
+        finPending.textContent = "Bs. 0";
+        container.className = "fin-item success";
+    } else {
+        if(label) label.textContent = "Saldo Extra";
+        finPending.textContent = `Bs. ${Math.abs(diferencia)}`;
+        container.className = "fin-item"; 
+        container.style.color = "var(--primary)";
+        container.style.fontWeight = "bold";
+    }
+  }
+
   for (let i = 0; i < firstDayIndex; i++) {
     const div = document.createElement("div");
     div.classList.add("day-cell", "empty");
     calendarBody.appendChild(div);
   }
 
-  // Celdas de días
   for (let i = 1; i <= lastDay; i++) {
     const cell = document.createElement("div");
     cell.classList.add("day-cell");
     
-    // Marcar "Hoy"
     const today = new Date();
     if (i === today.getDate() && month === today.getMonth() && year === today.getFullYear()) {
       cell.classList.add("today");
@@ -1109,49 +1179,75 @@ function renderCalendar() {
     dayNumber.textContent = i;
     cell.appendChild(dayNumber);
 
-    // BUSCAR EVENTOS PARA ESTE DÍA
     const dayEvents = monthInvoices.filter(inv => parseInt(inv.fechaDia) === i);
 
     dayEvents.forEach(evt => {
-      // Aplicar filtros visuales
       if (evt.estado === 'pagado' && !showPaid) return;
-      if (evt.estado !== 'pagado' && !showPending) return;
+      if (evt.estado === 'pendiente' && !showPending) return;
 
       const pill = document.createElement("div");
-      pill.className = `cal-event status-${evt.estado}`;
-      pill.innerHTML = `<span>$${evt.monto}</span>`;
-      pill.title = `${evt.notas || 'Sin notas'} - ${evt.estado.toUpperCase()}`;
+      pill.className = `cal-event status-${evt.estado}`; 
+      pill.innerHTML = `<span>Bs. ${evt.monto}</span>`;
+      pill.title = `${evt.notas || 'Sin concepto'}`;
       
-      // Al hacer clic en el pill, podemos abrir el PDF o preguntar si quiere marcar pagado
       pill.addEventListener("click", (e) => {
         e.stopPropagation();
         if(evt.estado !== 'pagado') {
-           if(confirm(`¿Marcar recibo de $${evt.monto} como PAGADO?`)) {
-             marcarComoPagado(evt.id);
-           }
+             if(confirm(`¿Marcar recibo de Bs. ${evt.monto} como PAGADO?`)) marcarComoPagado(evt.id);
         } else {
            generarPDFRecibo({...evt, numeroComprobante: evt.id});
         }
       });
-
       cell.appendChild(pill);
     });
 
+    if (i === 1 && diferencia > 0 && showPending) {
+       const debtPill = document.createElement("div");
+       debtPill.className = "cal-event status-pendiente"; 
+       debtPill.style.border = "1px dashed var(--danger)"; 
+       debtPill.innerHTML = `<span>⚠️ Falta Bs. ${diferencia}</span>`;
+       debtPill.title = "Saldo restante para completar el alquiler";
+       
+       debtPill.addEventListener("click", (e) => {
+         e.stopPropagation();
+         prepararCobroDeuda(diferencia);
+       });
+       cell.appendChild(debtPill);
+    }
     calendarBody.appendChild(cell);
   }
 }
 
-// 4. FUNCIÓN AUXILIAR: MARCAR PAGADO DESDE CALENDARIO
+function prepararCobroDeuda(monto) {
+  const dayInput = document.getElementById("invoice-day");
+  const monthInput = document.getElementById("invoice-month");
+  const yearInput = document.getElementById("invoice-year");
+  const amountInput = document.getElementById("invoice-amount");
+  const notesInput = document.getElementById("invoice-notes");
+  const statusInput = document.getElementById("invoice-status");
+
+  const today = new Date();
+  dayInput.value = today.getDate();
+  monthInput.value = today.getMonth() + 1;
+  yearInput.value = today.getFullYear();
+  
+  amountInput.value = monto; 
+  statusInput.value = "pagado"; 
+  notesInput.value = "Saldo restante Alquiler";
+  
+  document.querySelector(".receipt-form").scrollIntoView({ behavior: "smooth" });
+  amountInput.focus();
+}
+
 async function marcarComoPagado(invoiceId) {
     try {
         await updateDoc(doc(db, "invoices", invoiceId), { estado: "pagado" });
-        cargarRecibos(selectedUnitId); // Recargar todo
+        cargarRecibos(selectedUnitId); 
     } catch(e) {
         alert("Error al actualizar");
     }
 }
 
-// 5. EVENT LISTENERS PARA NAVEGACIÓN DEL CALENDARIO
 document.getElementById("cal-prev")?.addEventListener("click", () => {
     currentDate.setMonth(currentDate.getMonth() - 1);
     renderCalendar();
@@ -1160,33 +1256,49 @@ document.getElementById("cal-next")?.addEventListener("click", () => {
     currentDate.setMonth(currentDate.getMonth() + 1);
     renderCalendar();
 });
-
-// Filtros
 document.querySelectorAll('.calendar-filters input').forEach(chk => {
     chk.addEventListener("change", renderCalendar);
 });
 
+// =========================================================================
+//  GUARDAR RECIBO (Con Numeración Correlativa)
+// =========================================================================
 if (invoiceForm) invoiceForm.addEventListener("submit", async (e) => {
   e.preventDefault();
   if (!activeTenantId) return alert("Error: No hay inquilino activo");
+
+  // Buscar último número para correlativo
+  let nuevoNumero = 1;
+  try {
+      const qLast = query(collection(db, "invoices"), orderBy("numero", "desc"), limit(1));
+      const snapLast = await getDocs(qLast);
+      if(!snapLast.empty) {
+          const lastData = snapLast.docs[0].data();
+          if(lastData.numero) nuevoNumero = Number(lastData.numero) + 1;
+      }
+  } catch(err) {
+      console.log("Primer recibo o base de datos nueva.");
+  }
 
   const data = {
     buildingId: selectedBuildingId, unitId: selectedUnitId, tenantId: activeTenantId,
     buildingNombre: selectedBuildingName, unitNombre: selectedUnitName, tenantNombre: activeTenantName,
     fechaDia: invoiceDayInput.value, fechaMes: invoiceMonthInput.value, fechaAnio: invoiceYearInput.value,
     monto: Number(invoiceAmountInput.value), estado: invoiceStatusSelect.value, notas: invoiceNotesInput.value,
+    numero: nuevoNumero, // Guardamos el número
     creadoEn: new Date()
   };
 
   const ref = await addDoc(collection(db, "invoices"), data);
   generarPDFRecibo({ ...data, numeroComprobante: ref.id });
+  
   invoiceForm.reset();
   initYearSelector();
   updateReceiptContext(activeTenantData);
   cargarRecibos(selectedUnitId);
 });
 
-// ========================= PDF =========================
+// ========================= PDF (Talonario Profesional) =========================
 function generarPDFContratoAlquiler(info) {
   const doc = new jsPDF();
   doc.setFont("helvetica", "bold"); doc.setFontSize(18);
@@ -1197,29 +1309,129 @@ function generarPDFContratoAlquiler(info) {
   add("Inmueble", info.buildingNombre); add("Unidad", info.unitNombre);
   add("Inquilino", info.tenantNombre); add("Documento", info.documento || "N/A");
   add("Fecha Inicio", info.fechaInicio); add("Fecha Fin", info.fechaFin);
-  add("Monto Mensual", `$${Number(info.montoAlquiler).toFixed(2)}`);
+  add("Monto Mensual", `Bs. ${Number(info.montoAlquiler).toFixed(2)}`);
   y += 10; doc.text("Notas:", 20, y); y += 7;
   doc.setFontSize(10); doc.text(doc.splitTextToSize(info.notas || "Sin observaciones.", 170), 20, y);
   doc.save(`Contrato_${info.tenantNombre}.pdf`);
 }
 
 function generarPDFRecibo(info) {
-  const doc = new jsPDF();
-  doc.setFontSize(16); doc.text("RECIBO DE PAGO", 105, 20, null, null, "center");
+  const doc = new jsPDF({
+    orientation: "landscape",
+    unit: "mm",
+    format: [210, 110] 
+  });
+
+  doc.setLineWidth(0.5); doc.setDrawColor(0);
+  doc.rect(5, 5, 200, 100); 
+
+  doc.setFillColor(240, 240, 240);
+  doc.rect(5, 5, 200, 20, 'F'); doc.rect(5, 5, 200, 20);
+
+  doc.setFont("helvetica", "bold"); doc.setFontSize(18);
+  doc.text("RECIBO DE ALQUILER", 10, 18);
+  
+  // NUMERO CORRELATIVO
   doc.setFontSize(12);
-  doc.text(`Comprobante: #${info.numeroComprobante.slice(0, 8)}`, 20, 40);
-  doc.text(`Fecha: ${info.fechaDia}/${info.fechaMes}/${info.fechaAnio}`, 20, 50);
-  doc.text(`Inquilino: ${info.tenantNombre}`, 20, 60);
-  doc.text(`Concepto: ${info.notas || "Alquiler"}`, 20, 70);
+  const numRecibo = info.numero ? String(info.numero).padStart(6, '0') : "---";
+  doc.text(`Nº: ${numRecibo}`, 195, 12, { align: "right" });
+  
+  doc.setFontSize(10); doc.setFont("helvetica", "normal");
+  doc.text(`Fecha: ${info.fechaDia}/${info.fechaMes}/${info.fechaAnio}`, 195, 20, { align: "right" });
+
+  let y = 40;
+  const xLabel = 15; const xValue = 55; const lineGap = 12;
+
+  doc.setFont("helvetica", "bold"); doc.text("RECIBÍ DE:", xLabel, y);
+  doc.setFont("helvetica", "normal"); doc.text(info.tenantNombre.toUpperCase(), xValue, y);
+  doc.line(xValue - 2, y + 2, 195, y + 2);
+  
+  y += lineGap;
+
+  // MONTO EN LETRAS
+  doc.setFont("helvetica", "bold"); doc.text("LA SUMA DE:", xLabel, y);
+  doc.setFont("helvetica", "normal");
+  const montoTexto = numeroALetras(info.monto);
+  doc.text(`Bs. ${Number(info.monto).toFixed(2)}  (${montoTexto})`, xValue, y);
+  doc.line(xValue - 2, y + 2, 195, y + 2);
+
+  y += lineGap;
+
+  doc.setFont("helvetica", "bold"); doc.text("CONCEPTO:", xLabel, y);
+  doc.setFont("helvetica", "normal");
+  const concepto = `${info.notas || "Alquiler"} - Inmueble: ${info.buildingNombre} - Unidad: ${info.unitNombre}`;
+  doc.text(concepto, xValue, y);
+  doc.line(xValue - 2, y + 2, 195, y + 2);
+
+  y += lineGap + 5;
+
+  doc.setDrawColor(0); doc.setLineWidth(0.5);
+  doc.rect(15, y, 60, 15);
+  doc.setFontSize(10); doc.text("MONTO TOTAL", 45, y + 5, { align: "center" });
   doc.setFontSize(14); doc.setFont("helvetica", "bold");
-  doc.text(`TOTAL: $${Number(info.monto).toFixed(2)}`, 20, 90);
-  doc.save(`Recibo_${info.numeroComprobante}.pdf`);
+  doc.text(`Bs. ${Number(info.monto).toFixed(2)}`, 45, y + 12, { align: "center" });
+
+  doc.line(120, y + 12, 190, y + 12);
+  doc.setFontSize(8); doc.setFont("helvetica", "normal");
+  doc.text("FIRMA / CONFORME", 155, y + 16, { align: "center" });
+
+  doc.save(`Recibo_${info.tenantNombre}_${info.fechaMes}-${info.fechaAnio}.pdf`);
+}
+
+// ========================= CONVERSOR NÚMERO A LETRAS =========================
+function numeroALetras(num) {
+    if (!num) return "CERO BOLIVIANOS";
+    const parteEntera = Math.floor(num);
+    const parteDecimal = Math.round((num - parteEntera) * 100);
+    const centavos = String(parteDecimal).padStart(2, '0') + "/100 BOLIVIANOS";
+    
+    if (parteEntera === 0) return "CERO " + centavos;
+    
+    const unidades = ["", "UN", "DOS", "TRES", "CUATRO", "CINCO", "SEIS", "SIETE", "OCHO", "NUEVE"];
+    const decenas = ["", "DIEZ", "VEINTE", "TREINTA", "CUARENTA", "CINCUENTA", "SESENTA", "SETENTA", "OCHENTA", "NOVENTA"];
+    const diezY = ["DIEZ", "ONCE", "DOCE", "TRECE", "CATORCE", "QUINCE", "DIECISEIS", "DIECISIETE", "DIECIOCHO", "DIECINUEVE"];
+    const centenas = ["", "CIENTO", "DOSCIENTOS", "TRESCIENTOS", "CUATROCIENTOS", "QUINIENTOS", "SEISCIENTOS", "SETECIENTOS", "OCHOCIENTOS", "NOVECIENTOS"];
+
+    function leerTres(n) {
+        let u = n % 10;
+        let d = Math.floor(n / 10) % 10;
+        let c = Math.floor(n / 100);
+        let texto = "";
+
+        if (c === 1 && d === 0 && u === 0) texto += "CIEN ";
+        else texto += centenas[c] + " ";
+
+        if (d === 1) {
+            texto += diezY[u] + " ";
+            return texto; // Diez a Diecinueve se matan aquí
+        } else if (d > 1) {
+            texto += decenas[d];
+            if (u > 0) texto += " Y " + unidades[u];
+        } else {
+            if (u > 0) texto += unidades[u];
+        }
+        return texto;
+    }
+
+    let textoFinal = "";
+    
+    // Miles
+    const miles = Math.floor(parteEntera / 1000);
+    const resto = parteEntera % 1000;
+
+    if (miles > 0) {
+        if (miles === 1) textoFinal += "MIL ";
+        else textoFinal += leerTres(miles) + " MIL ";
+    }
+
+    if (resto > 0) textoFinal += leerTres(resto);
+
+    return textoFinal.trim() + " " + centavos;
 }
 
 // ========================= INIT =========================
 async function init() {
   await cargarEdificios();
-  // MOSTRAR PÁGINA INICIAL AL CARGAR
   showPage(pageEdificios); 
   console.log("Sistema cargado y listo.");
 }
