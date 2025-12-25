@@ -12,8 +12,6 @@ import {
 } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js";
 
 // Intentamos obtener la app ya inicializada en app.js
-// Si da error, asegúrate de que app.js cargue antes o tenga la config. 
-// En este flujo modular, getApp() suele funcionar bien si app.js ya corrió.
 const app = getApp();
 const db = getFirestore(app);
 
@@ -24,6 +22,9 @@ const staffModuleRoot = document.getElementById("staff-module-root");
 const currentBuildingHidden = document.getElementById("current-building-id");
 // Labels para mostrar contexto en el modal
 const staffBuildingLabel = document.getElementById("staff-building-label");
+
+// BOTÓN NUEVO (Crucial para agregar personal)
+const btnAddStaff = document.getElementById("btn-add-staff");
 
 // Resúmenes en otras pestañas (Inmuebles / Unidades)
 const summaryStaffCount = document.getElementById("summary-staff-count");
@@ -61,10 +62,7 @@ function actualizarResumenStaff(total, nombresActivos) {
     if (total === 0) {
       summaryStaffNames.textContent = "Sin personal registrado";
     } else if (nombresActivos.length === 0) {
-      summaryStaffNames.textContent =
-        total === 1
-          ? "1 registrado (inactivo)"
-          : `${total} registrados (ninguno activo)`;
+      summaryStaffNames.textContent = total === 1 ? "1 registrado (inactivo)" : `${total} registrados (ninguno activo)`;
     } else {
       const todos = nombresActivos.join(", ");
       if (total === nombresActivos.length) {
@@ -83,8 +81,7 @@ function actualizarResumenStaff(total, nombresActivos) {
       unitsSummaryStaff.textContent = "Sin personal activo";
     } else {
       const primeros = nombresActivos.slice(0, 2).join(", ");
-      const extra =
-        nombresActivos.length > 2 ? ` y ${nombresActivos.length - 2} más` : "";
+      const extra = nombresActivos.length > 2 ? ` y ${nombresActivos.length - 2} más` : "";
       unitsSummaryStaff.textContent = `${primeros}${extra}`;
     }
   }
@@ -120,8 +117,13 @@ async function cargarPersonalEdificio(buildingId) {
       staffGridContainer.innerHTML = '<div style="padding:1.5rem; text-align:center; color:var(--text-muted);">Selecciona un inmueble para gestionar su personal.</div>';
     }
     actualizarResumenStaff(0, []);
+    // Deshabilitar botón de agregar si no hay edificio
+    if (btnAddStaff) btnAddStaff.disabled = true;
     return;
   }
+
+  // Habilitar botón porque ya hay edificio
+  if (btnAddStaff) btnAddStaff.disabled = false;
 
   // Consulta Firestore
   const qStaff = query(
@@ -155,7 +157,7 @@ async function cargarPersonalEdificio(buildingId) {
   let total = 0;
 
   const table = document.createElement("table");
-  table.className = "mui-data-grid-table"; // Usamos la clase CSS nueva
+  table.className = "mui-data-grid-table"; 
 
   const thead = document.createElement("thead");
   thead.innerHTML = `
@@ -193,11 +195,7 @@ async function cargarPersonalEdificio(buildingId) {
           ${estadoTexto}
         </span>
       </div>
-      ${
-        data.notas 
-        ? `<div style="font-size:0.8rem; color:var(--text-muted); margin-top:0.25rem;">${data.notas}</div>` 
-        : ''
-      }
+      ${data.notas ? `<div style="font-size:0.8rem; color:var(--text-muted); margin-top:0.25rem;">${data.notas}</div>` : ''}
     `;
     tr.appendChild(tdMain);
 
@@ -222,32 +220,10 @@ async function cargarPersonalEdificio(buildingId) {
     tdActions.style.textAlign = "right";
     tdActions.style.whiteSpace = "nowrap";
 
-    // Botón Toggle (Activar/Desactivar)
-    const toggleBtn = document.createElement("button");
-    toggleBtn.type = "button";
-    toggleBtn.className = "icon-button";
-    toggleBtn.title = isActive ? "Desactivar" : "Activar";
-    toggleBtn.innerHTML = `
-      <span class="material-symbols-outlined" style="color: ${isActive ? 'var(--text-muted)' : 'var(--success)'}">
-        ${isActive ? "toggle_on" : "toggle_off"}
-      </span>
-    `;
-    toggleBtn.addEventListener("click", async (e) => {
-      e.stopPropagation();
-      try {
-        await updateDoc(doc(db, "staff", id), { activo: !isActive });
-        cargarPersonalEdificio(buildingId); // Recargar
-      } catch (err) {
-        console.error(err);
-        alert("Error al actualizar estado.");
-      }
-    });
-
     // Botón Editar
     const editBtn = document.createElement("button");
     editBtn.type = "button";
     editBtn.className = "icon-button";
-    editBtn.title = "Editar";
     editBtn.innerHTML = `<span class="material-symbols-outlined">edit</span>`;
     editBtn.addEventListener("click", (e) => {
       e.stopPropagation();
@@ -263,7 +239,6 @@ async function cargarPersonalEdificio(buildingId) {
     const deleteBtn = document.createElement("button");
     deleteBtn.type = "button";
     deleteBtn.className = "icon-button";
-    deleteBtn.title = "Eliminar";
     deleteBtn.innerHTML = `<span class="material-symbols-outlined" style="color:var(--danger);">delete</span>`;
     deleteBtn.addEventListener("click", async (e) => {
       e.stopPropagation();
@@ -278,7 +253,6 @@ async function cargarPersonalEdificio(buildingId) {
       }
     });
 
-    tdActions.appendChild(toggleBtn);
     tdActions.appendChild(editBtn);
     tdActions.appendChild(deleteBtn);
     tr.appendChild(tdActions);
@@ -359,7 +333,6 @@ if (staffModalForm) {
     e.preventDefault();
 
     const buildingId = currentBuildingHidden?.value || "";
-    // Intentar recuperar nombre del label si no tenemos otro origen
     const buildingNombre = staffBuildingLabel?.textContent || "";
 
     if (!buildingId) {
@@ -416,26 +389,22 @@ if (staffModalForm) {
 //  EVENTS & INIT
 // =======================================================
 
-// 1. Escuchar cambio de ID en el input oculto (comunicación con app.js)
+// 1. Evento para el botón "Nuevo Personal"
+if (btnAddStaff) {
+    btnAddStaff.addEventListener("click", () => {
+        const bid = currentBuildingHidden.value;
+        if(!bid) return alert("Selecciona un inmueble primero.");
+        abrirStaffModal({ buildingId: bid });
+    });
+}
+
+// 2. Escuchar cambio de ID en el input oculto (comunicación con app.js)
 if (currentBuildingHidden) {
   currentBuildingHidden.addEventListener("change", () => {
     const buildingId = currentBuildingHidden.value || "";
     cargarPersonalEdificio(buildingId);
   });
 }
-
-// 2. Evento personalizado "Nuevo Personal" (disparado desde el botón en la tabla de edificios)
-window.addEventListener("openStaffModalForBuilding", (event) => {
-  const detail = event.detail || {};
-  const buildingId = detail.buildingId || "";
-  const buildingNombre = detail.buildingNombre || "";
-
-  if (!buildingId) {
-    alert("No se encontró el inmueble.");
-    return;
-  }
-  abrirStaffModal({ buildingId, buildingNombre });
-});
 
 // 3. Inicializar al cargar
 function init() {
