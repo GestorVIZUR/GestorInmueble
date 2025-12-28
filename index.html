@@ -97,16 +97,18 @@
         </div>
 
         <section id="building-summary" class="hidden dashboard-card">
-          <div class="card-header">
-            <h2>Resumen del inmueble</h2>
-            <div class="card-actions">
-              <button type="button" id="summary-open-services" class="btn btn-outline btn-xs">
-                <span class="material-symbols-outlined">tune</span>
-                Servicios
+          <div class="card-header-actions">
+            <h2 style="margin:0;">Resumen del inmueble</h2>
+            
+            <div class="actions-group">
+              <button type="button" id="summary-open-services" class="btn-soft" title="Configurar Servicios">
+                <span class="material-symbols-outlined">settings</span>
+                <span>Servicios</span>
               </button>
-              <button type="button" id="summary-open-map" class="btn btn-outline btn-xs">
-                <span class="material-symbols-outlined">map</span>
-                Mapa
+
+              <button type="button" id="summary-open-map" class="btn-soft" title="Ver Ubicación">
+                <span class="material-symbols-outlined">location_on</span>
+                <span>Mapa</span>
               </button>
             </div>
           </div>
@@ -118,19 +120,32 @@
 
             <div class="summary-divider"></div>
 
-            <div class="summary-item"><strong>Medidor agua:</strong> <span id="summary-water-code">—</span></div>
-            <div class="summary-item"><strong>Medidor gas:</strong> <span id="summary-gas-code">—</span></div>
+            <div class="summary-item">
+              <strong><span class="material-symbols-outlined icon-tiny">water_drop</span> Agua</strong>
+              <span id="summary-water-code">—</span>
+            </div>
+            <div class="summary-item">
+              <strong><span class="material-symbols-outlined icon-tiny">propane</span> Gas</strong>
+              <span id="summary-gas-code">—</span>
+            </div>
 
             <div class="summary-divider"></div>
 
-            <div class="summary-item"><strong>Internet (cód):</strong> <span id="summary-internet-code">—</span></div>
-            <div class="summary-item"><strong>Proveedor:</strong> <span id="summary-internet-company">—</span></div>
-            <div class="summary-item"><strong>Precio:</strong> <span id="summary-internet-price">—</span></div>
+            <div class="full-row">
+              <strong style="display:block; margin-bottom:0.5rem; color:var(--text-muted); font-size:0.75rem; text-transform:uppercase;">
+                <span class="material-symbols-outlined icon-tiny">wifi</span> Conexiones de Internet
+              </strong>
+              <div id="summary-internet-list" class="internet-tags-container">
+                 <span class="hint">Sin conexiones registradas</span>
+              </div>
+            </div>
 
             <div class="summary-divider"></div>
 
-            <div class="summary-item"><strong>Ubicación:</strong> <span id="summary-maps-url" class="text-truncate">—</span></div>
-            <div class="summary-item full-row"><strong>Nota:</strong> <span class="hint" style="font-size:0.75rem;">Para ver el personal, selecciona un inmueble en la lista inferior.</span></div>
+            <div class="summary-item full-row">
+              <strong>Ubicación:</strong> 
+              <span id="summary-maps-url" class="text-truncate link-style">—</span>
+            </div>
           </div>
         </section>
 
@@ -163,6 +178,7 @@
 
           <div id="building-grid" class="mui-data-grid"></div>
         </section>
+        
         <section id="staff-section-edificios" class="dashboard-card">
           <div class="section-header">
             <h2>Personal Asignado</h2>
@@ -395,7 +411,7 @@
 
                   <div class="form-group full-width">
                     <label>Concepto</label>
-                    <input type="text" id="invoice-notes" placeholder="Ej: Alquiler Marzo" />
+                    <textarea id="invoice-notes" class="auto-grow" placeholder="Ej: Alquiler Marzo" rows="1"></textarea>
                   </div>
                 </div>
 
