@@ -112,7 +112,7 @@ function showPage(page) {
     if (!p) return;
     if (p === page) {
       p.style.display = "block";
-      window.scrollTo(0, 0); // Scroll al top al cambiar
+      window.scrollTo(0, 0); 
     } else {
       p.style.display = "none";
     }
@@ -124,13 +124,12 @@ if (tabUnidades) tabUnidades.addEventListener("change", () => showPage(pageUnida
 if (tabInquilinos) tabInquilinos.addEventListener("change", () => showPage(pageInquilinos));
 if (tabRecibos) tabRecibos.addEventListener("change", () => showPage(pageRecibos));
 
-// Botones "Volver"
 const backButtons = document.querySelectorAll(".back-button");
 backButtons.forEach((btn) => {
   btn.addEventListener("click", () => {
     const target = btn.dataset.target;
     if (target === "edificios" && tabEdificios) {
-      tabEdificios.checked = true; // Activa el radio button
+      tabEdificios.checked = true;
       showPage(pageEdificios);
     } else if (target === "unidades" && tabUnidades) {
       tabUnidades.checked = true;
@@ -140,37 +139,41 @@ backButtons.forEach((btn) => {
 });
 
 // ========================= REFERENCIAS DOM GLOBALES =========================
-// -- EDIFICIOS --
+
+// -- EDIFICIOS (Formulario Principal) --
 const buildingForm = document.getElementById("building-form");
 const buildingIdHiddenInput = document.getElementById("building-id-hidden"); 
 const buildingExtraFieldsDiv = document.getElementById("building-extra-fields");
 const buildingNameInput = document.getElementById("building-name");
 const buildingTypeSelect = document.getElementById("building-type");
 const buildingAddressInput = document.getElementById("building-address");
-const buildingWaterCodeInput = document.getElementById("building-water-code");
-const buildingGasCodeInput = document.getElementById("building-gas-code");
-// Mantenemos ref antigua solo por si acaso
+const buildingGasCodeInput = document.getElementById("building-gas-code"); // Gas sigue simple
 const buildingMapsUrlInput = document.getElementById("building-maps-url");
 
-// INTERNET DINÁMICO (Formulario Principal)
-const internetListContainer = document.getElementById("internet-list-container");
+// Botones y Contenedores DINÁMICOS (Principal)
+const btnAddWater = document.getElementById("btn-add-water");
+const btnAddElectricity = document.getElementById("btn-add-electricity");
 const btnAddInternet = document.getElementById("btn-add-internet");
+const waterListContainer = document.getElementById("water-list-container");
+const electricityListContainer = document.getElementById("electricity-list-container");
+const internetListContainer = document.getElementById("internet-list-container");
 
 const buildingGrid = document.getElementById("building-grid");
 const buildingSearchInput = document.getElementById("building-search");
 const buildingSearchOptions = document.getElementById("building-search-options");
 
-// Resumen Edificio
+// -- RESUMEN EDIFICIO --
 const buildingSummarySection = document.getElementById("building-summary");
 const summaryBuildingName = document.getElementById("summary-building-name");
 const summaryBuildingType = document.getElementById("summary-building-type");
 const summaryBuildingAddress = document.getElementById("summary-building-address");
-const summaryWaterCode = document.getElementById("summary-water-code");
-const summaryInternetCode = document.getElementById("summary-internet-code");
-const summaryInternetCompany = document.getElementById("summary-internet-company");
-const summaryInternetPrice = document.getElementById("summary-internet-price");
 const summaryGasCode = document.getElementById("summary-gas-code");
 const summaryMapsUrl = document.getElementById("summary-maps-url");
+// Contenedores Resumen Dinámicos
+const summaryWaterList = document.getElementById("summary-water-list");
+const summaryElectricityList = document.getElementById("summary-electricity-list");
+const summaryInternetList = document.getElementById("summary-internet-list");
+
 const summaryOpenServicesBtn = document.getElementById("summary-open-services");
 const summaryOpenMapBtn = document.getElementById("summary-open-map");
 
@@ -180,9 +183,9 @@ const unitList = document.getElementById("unit-list");
 const unitsSummaryBuildingType = document.getElementById("units-summary-building-type");
 const unitsSummaryBuildingAddress = document.getElementById("units-summary-building-address");
 const unitsSummaryWaterCode = document.getElementById("units-summary-water-code");
+const unitsSummaryGasCode = document.getElementById("units-summary-gas-code");
 const unitsSummaryInternetCode = document.getElementById("units-summary-internet-code");
 const unitsSummaryInternetCompany = document.getElementById("units-summary-internet-company");
-const unitsSummaryGasCode = document.getElementById("units-summary-gas-code");
 const unitsSummaryOpenMapBtn = document.getElementById("units-summary-open-map");
 
 // -- INQUILINOS --
@@ -216,7 +219,8 @@ const receiptContractAmountLabel = document.getElementById("receipt-contract-amo
 const staffBuildingLabel = document.getElementById("staff-building-label");
 const currentBuildingHidden = document.getElementById("current-building-id");
 
-// -- MODALES --
+// ========================= MODALES =========================
+
 // Building Modal
 const buildingModal = document.getElementById("building-modal");
 const openBuildingModalBtn = document.getElementById("open-building-modal");
@@ -237,16 +241,20 @@ const unitModalTitle = document.getElementById("unit-modal-title");
 const unitModalCloseBtn = document.getElementById("unit-modal-close");
 const unitModalCancelBtn = document.getElementById("unit-modal-cancel");
 
-// Services Modal
+// Services Modal (Pequeño)
 const buildingServicesModal = document.getElementById("building-services-modal");
 const buildingServicesForm = document.getElementById("building-services-form");
 const modalBuildingIdInput = document.getElementById("modal-building-id");
 const modalBuildingNameLabel = document.getElementById("modal-building-name");
-const modalWaterCodeInput = document.getElementById("modal-water-code");
 const modalGasCodeInput = document.getElementById("modal-gas-code");
-// INTERNET DINÁMICO (Modal Servicios)
-const internetListServices = document.getElementById("internet-list-services");
+
+// Botones y Contenedores DINÁMICOS (Modal Servicios)
+const btnAddWaterSrv = document.getElementById("btn-add-water-srv");
+const btnAddElectricitySrv = document.getElementById("btn-add-electricity-srv");
 const btnAddInternetServices = document.getElementById("btn-add-internet-services");
+const waterListServices = document.getElementById("water-list-services");
+const electricityListServices = document.getElementById("electricity-list-services");
+const internetListServices = document.getElementById("internet-list-services");
 
 const buildingServicesCloseBtn = document.getElementById("building-services-close");
 const buildingServicesCancelBtn = document.getElementById("building-services-cancel");
@@ -267,22 +275,17 @@ const buildingMapCancelBtn = document.getElementById("building-map-cancel");
 let selectedBuildingId = null;
 let selectedBuildingName = null;
 let selectedBuildingData = null;
-
 let selectedUnitId = null;
 let selectedUnitName = null;
-
 let activeTenantId = null;
 let activeTenantName = null;
 let activeTenantData = null;
-
-// Variables para control de edición y validación de inquilinos
 let editingTenantId = null;
 let unitHasActiveTenant = false;
-
 let buildingsCache = [];
 let filteredBuildings = [];
 
-// ========================= UTILS UI =========================
+// ========================= UTILIDADES UI =========================
 function setTenantFormEnabled(enabled) {
   if (!tenantForm) return;
   const elements = tenantForm.querySelectorAll("input, button, textarea");
@@ -304,10 +307,8 @@ function initYearSelector() {
 }
 initYearSelector();
 
-// Funciones para Inquilinos (Autocompletar y Reset)
 function llenarFormularioInquilino(id, data) {
-  editingTenantId = id; // Estamos en modo edición
-  
+  editingTenantId = id;
   tenantNameInput.value = data.nombre || "";
   tenantDocInput.value = data.documento || "";
   tenantPhoneInput.value = data.telefono || "";
@@ -317,7 +318,6 @@ function llenarFormularioInquilino(id, data) {
   tenantMonthlyAmountInput.value = data.montoAlquiler || "";
   tenantNotesInput.value = data.notas || "";
 
-  // Cambiar botón visualmente
   const btnSubmit = tenantForm.querySelector("button[type='submit']");
   if(btnSubmit) {
       btnSubmit.innerHTML = `<span class="material-symbols-outlined">edit</span> Actualizar Datos`;
@@ -328,7 +328,7 @@ function llenarFormularioInquilino(id, data) {
 
 function resetTenantForm() {
   tenantForm.reset();
-  editingTenantId = null; // Volvemos a modo creación
+  editingTenantId = null;
   const btnSubmit = tenantForm.querySelector("button[type='submit']");
   if(btnSubmit) {
       btnSubmit.innerHTML = `<span class="material-symbols-outlined">save</span> Guardar Inquilino`;
@@ -337,15 +337,66 @@ function resetTenantForm() {
   }
 }
 
+// ========================= LÓGICA DINÁMICA GENÉRICA (AGUA, LUZ, INTERNET) =========================
+
+// Función maestra para pintar filas de servicio
+function renderServiceRow(data = {}, containerId, placeholderType = "Empresa") {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+
+  const div = document.createElement("div");
+  div.className = "internet-row"; // Usamos la clase CSS existente para diseño
+  
+  let ph1 = placeholderType; 
+  let ph2 = "Código / Medidor";
+  
+  div.innerHTML = `
+    <input type="text" class="srv-company" placeholder="${ph1}" value="${data.empresa || ''}">
+    <input type="text" class="srv-code" placeholder="${ph2}" value="${data.codigo || ''}">
+    <input type="number" class="srv-price" placeholder="Costo" value="${data.precio || ''}">
+    <button type="button" class="btn-remove-row"><span class="material-symbols-outlined">delete</span></button>
+  `;
+
+  div.querySelector(".btn-remove-row").addEventListener("click", () => div.remove());
+  container.appendChild(div);
+}
+
+// Función maestra para leer los datos antes de guardar
+function getServicesFromContainer(containerId) {
+  const container = document.getElementById(containerId);
+  if (!container) return [];
+
+  const rows = container.querySelectorAll(".internet-row");
+  const services = [];
+  rows.forEach(row => {
+    const empresa = row.querySelector(".srv-company").value.trim();
+    const codigo = row.querySelector(".srv-code").value.trim();
+    const precio = row.querySelector(".srv-price").value;
+    
+    if (empresa || codigo) {
+      services.push({ empresa, codigo, precio });
+    }
+  });
+  return services;
+}
+
+// EVENTOS ADD BUTTONS (Formulario Principal)
+if (btnAddWater) btnAddWater.addEventListener("click", () => renderServiceRow({}, "water-list-container", "Cooperativa"));
+if (btnAddElectricity) btnAddElectricity.addEventListener("click", () => renderServiceRow({}, "electricity-list-container", "Distribuidora"));
+if (btnAddInternet) btnAddInternet.addEventListener("click", () => renderServiceRow({}, "internet-list-container", "Proveedor"));
+
+// EVENTOS ADD BUTTONS (Modal Servicios Pequeño)
+if (btnAddWaterSrv) btnAddWaterSrv.addEventListener("click", () => renderServiceRow({}, "water-list-services", "Cooperativa"));
+if (btnAddElectricitySrv) btnAddElectricitySrv.addEventListener("click", () => renderServiceRow({}, "electricity-list-services", "Distribuidora"));
+if (btnAddInternetServices) btnAddInternetServices.addEventListener("click", () => renderServiceRow({}, "internet-list-services", "Proveedor"));
+
+
 // ========================= MAPAS =========================
 function buildEmbedMapUrlFromInput(input) {
   const trimmed = input.trim();
   const coordMatch = trimmed.match(/^(-?\d+(\.\d+)?),\s*(-?\d+(\.\d+)?)$/);
-  
   if (coordMatch) {
-    const lat = coordMatch[1];
-    const lng = coordMatch[3];
-    return `https://maps.google.com/maps?q=${lat},${lng}&z=15&output=embed`;
+    return `https://maps.google.com/maps?q=${trimmed}&z=15&output=embed`;
   }
   return `https://maps.google.com/maps?q=${encodeURIComponent(trimmed)}&z=15&output=embed`;
 }
@@ -353,7 +404,6 @@ function buildEmbedMapUrlFromInput(input) {
 function updateMapPreview(value) {
   if (!mapIframe) return;
   const trimmed = (value || "").trim();
-  
   if (!trimmed) {
     mapIframe.src = "";
     if(mapExternalLink) mapExternalLink.classList.add("hidden");
@@ -370,61 +420,24 @@ function updateMapPreview(value) {
   
   const embedSrc = buildEmbedMapUrlFromInput(trimmed);
   mapIframe.src = embedSrc;
-  
   if(mapPreviewHint) mapPreviewHint.textContent = "Vista previa cargada.";
 }
 
-// ========================= LOGICA INTERNET DINÁMICO =========================
-if (btnAddInternet) {
-  btnAddInternet.addEventListener("click", () => renderInternetRow({}, "internet-list-container"));
-}
-if (btnAddInternetServices) {
-  btnAddInternetServices.addEventListener("click", () => renderInternetRow({}, "internet-list-services"));
-}
+// ========================= MODALES (Lógica Apertura) =========================
 
-function renderInternetRow(data = {}, containerId) {
-  const container = document.getElementById(containerId);
-  if (!container) return;
-
-  const div = document.createElement("div");
-  div.className = "internet-row";
-  
-  div.innerHTML = `
-    <input type="text" class="int-company" placeholder="Empresa" value="${data.empresa || ''}">
-    <input type="text" class="int-code" placeholder="Código / ID" value="${data.codigo || ''}">
-    <input type="number" class="int-price" placeholder="Costo" value="${data.precio || ''}">
-    <button type="button" class="btn-remove-row"><span class="material-symbols-outlined">delete</span></button>
-  `;
-
-  div.querySelector(".btn-remove-row").addEventListener("click", () => div.remove());
-  container.appendChild(div);
-}
-
-function getInternetDataFromContainer(containerId) {
-  const container = document.getElementById(containerId);
-  if (!container) return [];
-
-  const rows = container.querySelectorAll(".internet-row");
-  const services = [];
-  rows.forEach(row => {
-    const empresa = row.querySelector(".int-company").value.trim();
-    const codigo = row.querySelector(".int-code").value.trim();
-    const precio = row.querySelector(".int-price").value;
-    if (empresa || codigo) {
-      services.push({ empresa, codigo, precio });
-    }
-  });
-  return services;
-}
-
-// ========================= MODALES (Lógica) =========================
 function openBuildingModal() {
   buildingForm.reset();
   if (buildingIdHiddenInput) buildingIdHiddenInput.value = "";
   
-  // Reset lista internet
+  // Limpiar contenedores
+  if(waterListContainer) waterListContainer.innerHTML = "";
+  if(electricityListContainer) electricityListContainer.innerHTML = "";
   if(internetListContainer) internetListContainer.innerHTML = "";
-  renderInternetRow({}, "internet-list-container"); 
+  
+  // Agregar una fila vacía por defecto a cada uno
+  renderServiceRow({}, "water-list-container", "Cooperativa");
+  renderServiceRow({}, "electricity-list-container", "Distribuidora");
+  renderServiceRow({}, "internet-list-container", "Proveedor");
   
   if (buildingExtraFieldsDiv) buildingExtraFieldsDiv.style.display = "contents"; 
   const titleEl = buildingModal.querySelector("h3");
@@ -437,24 +450,33 @@ function abrirModalEditarEdificio(id, data) {
   buildingNameInput.value = data.nombre || "";
   buildingTypeSelect.value = data.tipo || "edificio";
   buildingAddressInput.value = data.direccion || "";
-  buildingWaterCodeInput.value = data.codigoAgua || "";
-  buildingGasCodeInput.value = data.codigoGas || "";
+  buildingGasCodeInput.value = data.codigoGas || ""; // Gas simple
   buildingMapsUrlInput.value = data.mapsUrl || "";
 
-  if(internetListContainer) internetListContainer.innerHTML = "";
-  if (data.internetServices && Array.isArray(data.internetServices)) {
-    data.internetServices.forEach(srv => renderInternetRow(srv, "internet-list-container"));
-  } else {
-    if (data.empresaInternet || data.codigoInternet) {
-        renderInternetRow({ 
-            empresa: data.empresaInternet, 
-            codigo: data.codigoInternet, 
-            precio: data.internetPrice 
-        }, "internet-list-container");
-    } else {
-        renderInternetRow({}, "internet-list-container");
-    }
+  // Helper para cargar listas
+  const loadList = (list, containerId, ph) => {
+      const container = document.getElementById(containerId);
+      container.innerHTML = "";
+      if (list && list.length > 0) {
+          list.forEach(item => renderServiceRow(item, containerId, ph));
+      } else {
+          renderServiceRow({}, containerId, ph);
+      }
+  };
+
+  // Compatibilidad Agua
+  let waterData = data.waterServices || [];
+  if (waterData.length === 0 && data.codigoAgua) waterData.push({ empresa: "Agua", codigo: data.codigoAgua });
+  
+  // Compatibilidad Internet
+  let netData = data.internetServices || [];
+  if (netData.length === 0 && (data.empresaInternet || data.codigoInternet)) {
+      netData.push({ empresa: data.empresaInternet, codigo: data.codigoInternet, precio: data.internetPrice });
   }
+
+  loadList(waterData, "water-list-container", "Cooperativa");
+  loadList(data.electricityServices, "electricity-list-container", "Distribuidora");
+  loadList(netData, "internet-list-container", "Proveedor");
 
   if (buildingExtraFieldsDiv) buildingExtraFieldsDiv.style.display = "contents";
   const titleEl = buildingModal.querySelector("h3");
@@ -467,33 +489,44 @@ if (openBuildingModalBtn) openBuildingModalBtn.addEventListener("click", openBui
 if (buildingModalCloseBtn) buildingModalCloseBtn.addEventListener("click", closeBuildingModal);
 if (buildingModalCancelBtn) buildingModalCancelBtn.addEventListener("click", closeBuildingModal);
 
+
+// --- Modal Servicios (Pequeño) ---
 function openBuildingServicesModal(buildingId, data) {
   modalBuildingIdInput.value = buildingId;
   modalBuildingNameLabel.textContent = data?.nombre || "";
-  modalWaterCodeInput.value = data?.codigoAgua || "";
   modalGasCodeInput.value = data?.codigoGas || "";
+
+  const loadList = (list, containerId, ph) => {
+      const container = document.getElementById(containerId);
+      container.innerHTML = "";
+      if (list && list.length > 0) {
+          list.forEach(item => renderServiceRow(item, containerId, ph));
+      } else {
+          renderServiceRow({}, containerId, ph);
+      }
+  };
+
+  let waterData = data.waterServices || [];
+  if (waterData.length === 0 && data.codigoAgua) waterData.push({ empresa: "Agua", codigo: data.codigoAgua });
   
-  if(internetListServices) internetListServices.innerHTML = "";
-  if (data.internetServices && Array.isArray(data.internetServices)) {
-    data.internetServices.forEach(srv => renderInternetRow(srv, "internet-list-services"));
-  } else {
-    if (data.empresaInternet || data.codigoInternet) {
-        renderInternetRow({ 
-            empresa: data.empresaInternet, 
-            codigo: data.codigoInternet, 
-            precio: data.internetPrice 
-        }, "internet-list-services");
-    } else {
-        renderInternetRow({}, "internet-list-services");
-    }
+  let netData = data.internetServices || [];
+  if (netData.length === 0 && (data.empresaInternet || data.codigoInternet)) {
+      netData.push({ empresa: data.empresaInternet, codigo: data.codigoInternet, precio: data.internetPrice });
   }
+
+  loadList(waterData, "water-list-services", "Cooperativa");
+  loadList(data.electricityServices, "electricity-list-services", "Distribuidora");
+  loadList(netData, "internet-list-services", "Proveedor");
   
   buildingServicesModal.classList.add("visible");
 }
+
 function closeServices() { buildingServicesModal.classList.remove("visible"); }
 if (buildingServicesCloseBtn) buildingServicesCloseBtn.addEventListener("click", closeServices);
 if (buildingServicesCancelBtn) buildingServicesCancelBtn.addEventListener("click", closeServices);
 
+
+// --- Modal Mapa ---
 function openMapForBuilding(buildingId, data) {
   modalMapBuildingIdInput.value = buildingId;
   modalMapBuildingNameLabel.textContent = data?.nombre || "";
@@ -507,6 +540,7 @@ if (buildingMapCloseBtn) buildingMapCloseBtn.addEventListener("click", closeMap)
 if (buildingMapCancelBtn) buildingMapCancelBtn.addEventListener("click", closeMap);
 if (modalMapsUrlInput) modalMapsUrlInput.addEventListener("input", (e) => updateMapPreview(e.target.value));
 
+// --- Modal Unidades ---
 function openUnitModal(unitId, data) {
   unitModalIdInput.value = unitId || "";
   unitModalNameInput.value = data?.nombre || "";
@@ -524,6 +558,7 @@ if (openUnitModalBtn) openUnitModalBtn.addEventListener("click", () => {
   if (!selectedBuildingId) return alert("Selecciona un inmueble primero.");
   openUnitModal(null, {});
 });
+
 
 // ========================= DATA GRID =========================
 function renderBuildingGrid() {
@@ -550,7 +585,6 @@ function renderBuildingGrid() {
 
   filteredBuildings.forEach((b) => {
     const tr = document.createElement("tr");
-
     let typeColor = "#2563eb", typeBg = "#eff6ff";
     if (b.tipo === 'casa') { typeColor = "#059669"; typeBg = "#ecfdf5"; }
     else if (b.tipo === 'local') { typeColor = "#f59e0b"; typeBg = "#fffbeb"; }
@@ -568,11 +602,12 @@ function renderBuildingGrid() {
 
     const td2 = document.createElement("td");
     const icons = [];
-    if (b.codigoAgua) icons.push(`<span class="material-symbols-outlined" style="font-size:16px;" title="Agua">water_drop</span>`);
+    
+    // Iconos inteligentes
+    if ((b.waterServices && b.waterServices.length > 0) || b.codigoAgua) icons.push(`<span class="material-symbols-outlined" style="font-size:16px;" title="Agua">water_drop</span>`);
+    if ((b.electricityServices && b.electricityServices.length > 0)) icons.push(`<span class="material-symbols-outlined" style="font-size:16px;" title="Luz">bolt</span>`);
     if (b.codigoGas) icons.push(`<span class="material-symbols-outlined" style="font-size:16px;" title="Gas">propane</span>`);
-    if ((b.internetServices && b.internetServices.length > 0) || b.codigoInternet) {
-        icons.push(`<span class="material-symbols-outlined" style="font-size:16px;" title="Internet">wifi</span>`);
-    }
+    if ((b.internetServices && b.internetServices.length > 0) || b.codigoInternet) icons.push(`<span class="material-symbols-outlined" style="font-size:16px;" title="Internet">wifi</span>`);
     if (b.mapsUrl) icons.push(`<span class="material-symbols-outlined" style="font-size:16px;" title="Mapa">pin_drop</span>`);
     
     td2.innerHTML = `<div style="display:flex; gap:0.5rem; color:var(--text-muted);">${icons.join("") || "<small>Sin servicios</small>"}</div>`;
@@ -587,7 +622,6 @@ function renderBuildingGrid() {
     `;
 
     tr.addEventListener("click", () => seleccionarEdificio(b.id, b, { irAUnidades: true }));
-
     td3.querySelector(".btn-edit").addEventListener("click", (e) => {
       e.stopPropagation(); abrirModalEditarEdificio(b.id, b);
     });
@@ -636,19 +670,24 @@ function aplicarFiltroEdificios() {
 }
 if (buildingSearchInput) buildingSearchInput.addEventListener("input", aplicarFiltroEdificios);
 
+// GUARDAR (Formulario Principal)
 if (buildingForm) buildingForm.addEventListener("submit", async (e) => {
   e.preventDefault();
   const id = buildingIdHiddenInput.value;
-  const internetServices = getInternetDataFromContainer("internet-list-container");
+  
+  const waterServices = getServicesFromContainer("water-list-container");
+  const electricityServices = getServicesFromContainer("electricity-list-container");
+  const internetServices = getServicesFromContainer("internet-list-container");
 
   const data = {
     nombre: buildingNameInput.value.trim(),
     tipo: buildingTypeSelect.value,
     direccion: buildingAddressInput.value.trim(),
-    codigoAgua: buildingWaterCodeInput.value,
     codigoGas: buildingGasCodeInput.value,
     mapsUrl: buildingMapsUrlInput.value,
-    internetServices: internetServices 
+    waterServices,
+    electricityServices,
+    internetServices
   };
 
   if (!id) {
@@ -665,16 +704,20 @@ if (buildingForm) buildingForm.addEventListener("submit", async (e) => {
   cargarEdificios();
 });
 
-// Guardar Servicios (Modal Rápido)
+// GUARDAR (Modal Servicios Rápido)
 if (buildingServicesForm) buildingServicesForm.addEventListener("submit", async (e) => {
   e.preventDefault();
   const id = modalBuildingIdInput.value;
-  const internetServices = getInternetDataFromContainer("internet-list-services");
+  
+  const waterServices = getServicesFromContainer("water-list-services");
+  const electricityServices = getServicesFromContainer("electricity-list-services");
+  const internetServices = getServicesFromContainer("internet-list-services");
 
   const data = {
-    codigoAgua: modalWaterCodeInput.value,
     codigoGas: modalGasCodeInput.value,
-    internetServices: internetServices
+    waterServices,
+    electricityServices,
+    internetServices
   };
   await updateDoc(doc(db, "buildings", id), data);
   if (selectedBuildingId === id) { 
@@ -684,7 +727,7 @@ if (buildingServicesForm) buildingServicesForm.addEventListener("submit", async 
   closeServices();
 });
 
-// Guardar Mapa
+// GUARDAR (Mapa)
 if (buildingMapForm) buildingMapForm.addEventListener("submit", async (e) => {
   e.preventDefault();
   const id = modalMapBuildingIdInput.value;
@@ -694,7 +737,9 @@ if (buildingMapForm) buildingMapForm.addEventListener("submit", async (e) => {
   closeMap();
 });
 
-// SELECCIÓN Y RESUMEN
+
+// ========================= SELECCIÓN Y RESUMEN =========================
+
 function seleccionarEdificio(id, data, opts = {}) {
   selectedBuildingId = id;
   selectedBuildingData = data;
@@ -710,8 +755,8 @@ function seleccionarEdificio(id, data, opts = {}) {
   cargarUnidades(id);
 
   if (opts.irAUnidades) {
-    if(tabUnidades) tabUnidades.checked = true; // Activar Tab
-    showPage(pageUnidades); // Cambiar vista
+    if(tabUnidades) tabUnidades.checked = true;
+    showPage(pageUnidades);
   }
 }
 
@@ -720,77 +765,83 @@ function actualizarResumenEdificio() {
   if (!d) return;
   if (buildingSummarySection) buildingSummarySection.classList.remove("hidden");
 
-  // Datos básicos
   if (summaryBuildingName) summaryBuildingName.textContent = d.nombre;
   if (summaryBuildingType) summaryBuildingType.textContent = d.tipo;
   if (summaryBuildingAddress) summaryBuildingAddress.textContent = d.direccion;
-  if (summaryWaterCode) summaryWaterCode.textContent = d.codigoAgua || "—";
   if (summaryGasCode) summaryGasCode.textContent = d.codigoGas || "—";
   
-  // Mapa
   if (summaryMapsUrl) {
-    summaryMapsUrl.textContent = d.mapsUrl || "Sin enlace de mapa";
+    summaryMapsUrl.textContent = d.mapsUrl || "Sin mapa";
+    summaryMapsUrl.title = d.mapsUrl || "";
     summaryMapsUrl.onclick = d.mapsUrl ? () => window.open(d.mapsUrl, '_blank') : null;
     summaryMapsUrl.style.cursor = d.mapsUrl ? "pointer" : "default";
     summaryMapsUrl.classList.toggle("link-style", !!d.mapsUrl);
   }
 
-  // === LÓGICA MEJORADA DE INTERNET ===
-  const container = document.getElementById("summary-internet-list");
-  if (container) {
-      container.innerHTML = ""; // Limpiar lista anterior
-
-      // Unificar datos nuevos (array) y antiguos (campos sueltos)
-      let services = d.internetServices || [];
-      
-      // Compatibilidad con datos antiguos si no existe el array
-      if (services.length === 0 && (d.codigoInternet || d.empresaInternet)) {
-          services.push({ 
-            empresa: d.empresaInternet, 
-            codigo: d.codigoInternet, 
-            precio: d.internetPrice 
-          });
+  // Helper renderizador de etiquetas
+  const renderTags = (list, container) => {
+      container.innerHTML = "";
+      if (!list || list.length === 0) {
+          container.innerHTML = '<span class="hint">No registrado</span>';
+          return;
       }
+      list.forEach(item => {
+          const div = document.createElement("div");
+          div.className = "service-tag"; 
+          const precioHtml = item.precio ? `<div class="separator"></div><span class="price">Bs. ${item.precio}</span>` : "";
+          
+          div.innerHTML = `
+             <strong>${item.empresa || "Servicio"}</strong>
+             <div class="separator"></div>
+             <span class="code">${item.codigo || "?"}</span>
+             ${precioHtml}
+          `;
+          container.appendChild(div);
+      });
+  };
 
-      if (services.length === 0) {
-          container.innerHTML = '<span class="hint">Sin conexiones registradas</span>';
-      } else {
-          // Crear una tarjetita por cada servicio
-          services.forEach(srv => {
-              const div = document.createElement("div");
-              div.className = "internet-tag";
-              
-              const empresa = srv.empresa || "Internet";
-              const codigo = srv.codigo || "S/N";
-              const precioHTML = srv.precio ? `<div class="separator"></div> <span class="price">Bs. ${srv.precio}</span>` : "";
+  // 1. Agua (Compatibilidad)
+  let waterData = d.waterServices || [];
+  if (waterData.length === 0 && d.codigoAgua) waterData.push({ empresa: "Agua", codigo: d.codigoAgua }); 
+  renderTags(waterData, summaryWaterList);
 
-              div.innerHTML = `
-                  <strong>${empresa}</strong>
-                  <div class="separator"></div>
-                  <span>${codigo}</span>
-                  ${precioHTML}
-              `;
-              container.appendChild(div);
-          });
-      }
+  // 2. Luz
+  renderTags(d.electricityServices, summaryElectricityList);
+
+  // 3. Internet (Compatibilidad)
+  let netData = d.internetServices || [];
+  if (netData.length === 0 && (d.empresaInternet || d.codigoInternet)) {
+      netData.push({ empresa: d.empresaInternet, codigo: d.codigoInternet, precio: d.internetPrice });
   }
+  renderTags(netData, summaryInternetList);
 
-  // Actualizar etiquetas en otras pestañas (como Unidades)
+  // Resumen Pequeño en Unidades
   if (selectedBuildingLabel) selectedBuildingLabel.textContent = d.nombre;
   if (invoiceBuildingLabel) invoiceBuildingLabel.textContent = d.nombre;
-
-  // Actualizar resumen pequeño en tab Unidades
   if (unitsSummaryBuildingType) unitsSummaryBuildingType.textContent = d.tipo;
   if (unitsSummaryBuildingAddress) unitsSummaryBuildingAddress.textContent = d.direccion;
-  if (unitsSummaryWaterCode) unitsSummaryWaterCode.textContent = d.codigoAgua || "—";
-  if (unitsSummaryGasCode) unitsSummaryGasCode.textContent = d.codigoGas || "—";
   
-  // En el resumen pequeño de unidades, mostramos solo un resumen de texto para internet
-  if (unitsSummaryInternetCode) {
-     const count = (d.internetServices || []).length;
-     unitsSummaryInternetCode.textContent = count > 0 ? `${count} conexione(s)` : "—";
+  // Resumen mini para Agua/Luz en Unidades
+  if (unitsSummaryWaterCode) {
+      unitsSummaryWaterCode.textContent = waterData.length > 0 ? `${waterData.length} medidor(es)` : "—";
   }
+  if (unitsSummaryInternetCode) {
+      unitsSummaryInternetCode.textContent = netData.length > 0 ? `${netData.length} conexión(es)` : "—";
+  }
+  if (unitsSummaryGasCode) unitsSummaryGasCode.textContent = d.codigoGas || "—";
 }
+
+// Botones de Acción del Resumen
+if (summaryOpenServicesBtn) {
+  summaryOpenServicesBtn.addEventListener("click", () => {
+    if (!selectedBuildingId) return alert("Selecciona un inmueble.");
+    openBuildingServicesModal(selectedBuildingId, selectedBuildingData);
+  });
+}
+if (summaryOpenMapBtn) summaryOpenMapBtn.addEventListener("click", () => openMapForBuilding(selectedBuildingId, selectedBuildingData));
+if (unitsSummaryOpenMapBtn) unitsSummaryOpenMapBtn.addEventListener("click", () => openMapForBuilding(selectedBuildingId, selectedBuildingData));
+
+
 // ========================= UNIDADES =========================
 async function cargarUnidades(buildingId) {
   unitList.innerHTML = "";
@@ -975,7 +1026,6 @@ async function rescindirContrato(id, unitId) {
   cargarUnidades(selectedBuildingId);
 }
 
-// LÓGICA DE GUARDAR INQUILINO
 if (tenantForm) tenantForm.addEventListener("submit", async (e) => {
   e.preventDefault();
   if (!selectedUnitId) return alert("Selecciona unidad.");
@@ -1050,7 +1100,6 @@ function updateReceiptContext(data) {
 let currentDate = new Date(); 
 let currentInvoices = []; 
 
-// 1. CARGAR RECIBOS
 async function cargarRecibos(unitId) {
   if (!activeTenantId) return;
   invoiceList.innerHTML = '<li style="padding:1rem;">Cargando...</li>';
@@ -1091,7 +1140,6 @@ async function cargarRecibos(unitId) {
   }
 }
 
-// 2. RENDERIZAR LISTA
 function renderInvoiceListItem(data) {
     const li = document.createElement("li");
     let stColor = "var(--warning)", icon = "schedule";
@@ -1118,7 +1166,6 @@ function renderInvoiceListItem(data) {
     invoiceList.appendChild(li);
 }
 
-// 3. RENDERIZAR CALENDARIO
 function renderCalendar() {
   const calendarBody = document.getElementById("calendar-body");
   const monthYearLabel = document.getElementById("cal-month-year");
@@ -1281,31 +1328,12 @@ document.getElementById("cal-next")?.addEventListener("click", () => {
 document.querySelectorAll('.calendar-filters input').forEach(chk => {
     chk.addEventListener("change", renderCalendar);
 });
-// ========================= EVENTOS DE LOS BOTONES DE RESUMEN =========================
 
-if (summaryOpenServicesBtn) {
-  summaryOpenServicesBtn.addEventListener("click", () => {
-    // Verificamos que haya un edificio seleccionado antes de abrir
-    if (!selectedBuildingId) return alert("Primero selecciona un inmueble de la lista.");
-    openBuildingServicesModal(selectedBuildingId, selectedBuildingData);
-  });
-}
-
-if (summaryOpenMapBtn) {
-  summaryOpenMapBtn.addEventListener("click", () => {
-    if (!selectedBuildingId) return alert("Primero selecciona un inmueble de la lista.");
-    openMapForBuilding(selectedBuildingId, selectedBuildingData);
-  });
-}
-
-// =========================================================================
-//  GUARDAR RECIBO (Con Numeración Correlativa)
-// =========================================================================
+// GUARDAR RECIBO (Con Numeración Correlativa)
 if (invoiceForm) invoiceForm.addEventListener("submit", async (e) => {
   e.preventDefault();
   if (!activeTenantId) return alert("Error: No hay inquilino activo");
 
-  // Buscar último número para correlativo
   let nuevoNumero = 1;
   try {
       const qLast = query(collection(db, "invoices"), orderBy("numero", "desc"), limit(1));
@@ -1323,7 +1351,7 @@ if (invoiceForm) invoiceForm.addEventListener("submit", async (e) => {
     buildingNombre: selectedBuildingName, unitNombre: selectedUnitName, tenantNombre: activeTenantName,
     fechaDia: invoiceDayInput.value, fechaMes: invoiceMonthInput.value, fechaAnio: invoiceYearInput.value,
     monto: Number(invoiceAmountInput.value), estado: invoiceStatusSelect.value, notas: invoiceNotesInput.value,
-    numero: nuevoNumero, // Guardamos el número
+    numero: nuevoNumero,
     creadoEn: new Date()
   };
 
@@ -1336,7 +1364,7 @@ if (invoiceForm) invoiceForm.addEventListener("submit", async (e) => {
   cargarRecibos(selectedUnitId);
 });
 
-// ========================= PDF (Talonario Profesional) =========================
+// ========================= PDF =========================
 function generarPDFContratoAlquiler(info) {
   const doc = new jsPDF();
   doc.setFont("helvetica", "bold"); doc.setFontSize(18);
@@ -1353,66 +1381,52 @@ function generarPDFContratoAlquiler(info) {
   doc.save(`Contrato_${info.tenantNombre}.pdf`);
 }
 
-// ========================= PDF (Talonario Profesional con Altura Dinámica) =========================
 function generarPDFRecibo(info) {
-  // 1. PRE-CÁLCULO: Usamos una instancia temporal para medir el texto antes de dibujar
+  // 1. PRE-CÁLCULO DE ALTURA
   const tempDoc = new jsPDF();
   tempDoc.setFont("helvetica", "normal");
   tempDoc.setFontSize(10);
   
   const maxWidthTexto = 135;
-  const lineHeight = 5; // Altura estimada por línea en mm
+  const lineHeight = 5; 
   
-  // Calculamos cuántas líneas ocupará el "Monto Escrito"
   const montoTexto = numeroALetras(info.monto);
   const textoMontoCompleto = `Bs. ${Number(info.monto).toFixed(2)}  (${montoTexto})`;
   const lineasMonto = tempDoc.splitTextToSize(textoMontoCompleto, maxWidthTexto);
   const alturaMonto = lineasMonto.length * lineHeight;
   
-  // Calculamos cuántas líneas ocupará el "Concepto" (Aquí es donde crece)
   const conceptoRaw = `${info.notas || "Alquiler"} - Inmueble: ${info.buildingNombre} - Unidad: ${info.unitNombre}`;
   const lineasConcepto = tempDoc.splitTextToSize(conceptoRaw, maxWidthTexto);
   const alturaConcepto = lineasConcepto.length * lineHeight;
   
-  // 2. CÁLCULO DE POSICIONES Y ALTURA TOTAL DE LA HOJA
-  // Sumamos píxel a píxel cuánto espacio necesitamos verticalmente
-  let cursorY = 40;            // Posición inicial (Recibí de)
-  cursorY += 12;               // Espacio fijo hasta 'La Suma De'
-  cursorY += Math.max(12, alturaMonto + 2); // Espacio dinámico de 'La Suma De'
-  cursorY += alturaConcepto;   // Espacio dinámico de 'Concepto'
-  cursorY += 10;               // Margen extra antes del pie de página
+  let cursorY = 40;            
+  cursorY += 12;               
+  cursorY += Math.max(12, alturaMonto + 2); 
+  cursorY += alturaConcepto;   
+  cursorY += 10;               
   
-  const alturaFooter = 15;     // Altura del cuadro de "Monto Total"
-  const margenFinal = 10;      // Espacio libre al final de la hoja
+  const alturaFooter = 15;     
+  const margenFinal = 10;      
   
   const alturaNecesaria = cursorY + alturaFooter + margenFinal;
-  
-  // Si el contenido pide más de 110mm, usamos la altura necesaria. Si no, mantenemos el estándar de 110mm.
   const alturaHoja = Math.max(110, alturaNecesaria);
 
-  // =======================================================
-  // 3. GENERACIÓN DEL PDF REAL
-  // =======================================================
+  // 2. GENERACIÓN PDF REAL
   const doc = new jsPDF({
     orientation: "landscape",
     unit: "mm",
-    format: [210, alturaHoja] // <--- AQUÍ APLICAMOS LA ALTURA CALCULADA
+    format: [210, alturaHoja] 
   });
 
-  // Marco y Fondo (Ahora se adapta al alto de la hoja)
   const margen = 5;
   const altoMarco = alturaHoja - (margen * 2);
   
   doc.setLineWidth(0.5); doc.setDrawColor(0);
   doc.rect(margen, margen, 200, altoMarco); 
 
-  // Encabezado Gris (Fijo arriba)
   doc.setFillColor(240, 240, 240);
   doc.rect(margen, margen, 200, 20, 'F'); doc.rect(margen, margen, 200, 20);
 
-  // --- CONTENIDO ---
-  
-  // Título y Datos Header
   doc.setFont("helvetica", "bold"); doc.setFontSize(18);
   doc.text("RECIBO DE ALQUILER", 10, 18);
   
@@ -1423,58 +1437,44 @@ function generarPDFRecibo(info) {
   doc.setFontSize(10); doc.setFont("helvetica", "normal");
   doc.text(`Fecha: ${info.fechaDia}/${info.fechaMes}/${info.fechaAnio}`, 195, 20, { align: "right" });
 
-  // Cuerpo del Recibo
   let y = 40;
   const xLabel = 15; 
   const xValue = 55; 
   
-  // 1. Recibí de
   doc.setFont("helvetica", "bold"); doc.text("RECIBÍ DE:", xLabel, y);
   doc.setFont("helvetica", "normal"); doc.text(info.tenantNombre.toUpperCase(), xValue, y);
   doc.line(xValue - 2, y + 2, 195, y + 2);
   
-  y += 12; // Salto fijo
+  y += 12; 
 
-  // 2. La suma de
   doc.setFont("helvetica", "bold"); doc.text("LA SUMA DE:", xLabel, y);
   doc.setFont("helvetica", "normal");
-  doc.text(lineasMonto, xValue, y); // Imprimimos las líneas calculadas antes
-  
-  // Subrayado ajustado al texto
+  doc.text(lineasMonto, xValue, y); 
   doc.line(xValue - 2, y + alturaMonto - 3, 195, y + alturaMonto - 3);
 
-  y += Math.max(12, alturaMonto + 2); // Salto dinámico
+  y += Math.max(12, alturaMonto + 2); 
 
-  // 3. Concepto (Texto Largo)
   doc.setFont("helvetica", "bold"); doc.text("CONCEPTO:", xLabel, y);
   doc.setFont("helvetica", "normal");
-  doc.text(lineasConcepto, xValue, y); // Imprimimos TODAS las líneas del concepto
-  
-  // Subrayado ajustado al final del bloque de texto
+  doc.text(lineasConcepto, xValue, y); 
   doc.line(xValue - 2, y + alturaConcepto - 3, 195, y + alturaConcepto - 3);
 
-  // Empujamos hacia abajo para el pie de página
   y += alturaConcepto + 10;
 
-  // --- PIE DE PÁGINA (Total y Firma) ---
-  // Ahora 'y' está garantizado para estar debajo del texto sin solaparse
   doc.setDrawColor(0); doc.setLineWidth(0.5);
-  
-  // Cuadro Total
   doc.rect(15, y, 60, 15);
   doc.setFontSize(10); doc.setFont("helvetica", "bold");
   doc.text("MONTO TOTAL", 45, y + 5, { align: "center" });
   doc.setFontSize(14);
   doc.text(`Bs. ${Number(info.monto).toFixed(2)}`, 45, y + 12, { align: "center" });
 
-  // Línea Firma
   doc.line(120, y + 12, 190, y + 12);
   doc.setFontSize(8); doc.setFont("helvetica", "normal");
   doc.text("FIRMA / CONFORME", 155, y + 16, { align: "center" });
 
   doc.save(`Recibo_${info.tenantNombre.replace(/\s+/g, '_')}_${info.fechaMes}-${info.fechaAnio}.pdf`);
 }
-// ========================= CONVERSOR NÚMERO A LETRAS =========================
+
 function numeroALetras(num) {
     if (!num) return "CERO BOLIVIANOS";
     const parteEntera = Math.floor(num);
@@ -1499,7 +1499,7 @@ function numeroALetras(num) {
 
         if (d === 1) {
             texto += diezY[u] + " ";
-            return texto; // Diez a Diecinueve se matan aquí
+            return texto; 
         } else if (d > 1) {
             texto += decenas[d];
             if (u > 0) texto += " Y " + unidades[u];
@@ -1511,7 +1511,6 @@ function numeroALetras(num) {
 
     let textoFinal = "";
     
-    // Miles
     const miles = Math.floor(parteEntera / 1000);
     const resto = parteEntera % 1000;
 
