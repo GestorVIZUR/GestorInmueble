@@ -720,55 +720,77 @@ function actualizarResumenEdificio() {
   if (!d) return;
   if (buildingSummarySection) buildingSummarySection.classList.remove("hidden");
 
+  // Datos básicos
   if (summaryBuildingName) summaryBuildingName.textContent = d.nombre;
   if (summaryBuildingType) summaryBuildingType.textContent = d.tipo;
   if (summaryBuildingAddress) summaryBuildingAddress.textContent = d.direccion;
   if (summaryWaterCode) summaryWaterCode.textContent = d.codigoAgua || "—";
   if (summaryGasCode) summaryGasCode.textContent = d.codigoGas || "—";
   
-  const services = d.internetServices || [];
-  if (services.length === 0 && (d.codigoInternet || d.empresaInternet)) {
-      services.push({ empresa: d.empresaInternet, codigo: d.codigoInternet, precio: d.internetPrice });
-  }
-
-  if (services.length > 0) {
-      const s1 = services[0];
-      if (summaryInternetCode) summaryInternetCode.textContent = s1.codigo || "—";
-      if (summaryInternetCompany) summaryInternetCompany.textContent = s1.empresa || "—";
-      if (summaryInternetPrice) summaryInternetPrice.textContent = s1.precio ? `Bs. ${s1.precio} ${services.length > 1 ? `(+${services.length-1})` : ''}` : "—";
-  } else {
-      if (summaryInternetCode) summaryInternetCode.textContent = "—";
-      if (summaryInternetCompany) summaryInternetCompany.textContent = "—";
-      if (summaryInternetPrice) summaryInternetPrice.textContent = "—";
-  }
-  
+  // Mapa
   if (summaryMapsUrl) {
-    summaryMapsUrl.textContent = d.mapsUrl || "Sin mapa";
-    summaryMapsUrl.title = d.mapsUrl || ""; 
+    summaryMapsUrl.textContent = d.mapsUrl || "Sin enlace de mapa";
+    summaryMapsUrl.onclick = d.mapsUrl ? () => window.open(d.mapsUrl, '_blank') : null;
+    summaryMapsUrl.style.cursor = d.mapsUrl ? "pointer" : "default";
+    summaryMapsUrl.classList.toggle("link-style", !!d.mapsUrl);
   }
 
+  // === LÓGICA MEJORADA DE INTERNET ===
+  const container = document.getElementById("summary-internet-list");
+  if (container) {
+      container.innerHTML = ""; // Limpiar lista anterior
+
+      // Unificar datos nuevos (array) y antiguos (campos sueltos)
+      let services = d.internetServices || [];
+      
+      // Compatibilidad con datos antiguos si no existe el array
+      if (services.length === 0 && (d.codigoInternet || d.empresaInternet)) {
+          services.push({ 
+            empresa: d.empresaInternet, 
+            codigo: d.codigoInternet, 
+            precio: d.internetPrice 
+          });
+      }
+
+      if (services.length === 0) {
+          container.innerHTML = '<span class="hint">Sin conexiones registradas</span>';
+      } else {
+          // Crear una tarjetita por cada servicio
+          services.forEach(srv => {
+              const div = document.createElement("div");
+              div.className = "internet-tag";
+              
+              const empresa = srv.empresa || "Internet";
+              const codigo = srv.codigo || "S/N";
+              const precioHTML = srv.precio ? `<div class="separator"></div> <span class="price">Bs. ${srv.precio}</span>` : "";
+
+              div.innerHTML = `
+                  <strong>${empresa}</strong>
+                  <div class="separator"></div>
+                  <span>${codigo}</span>
+                  ${precioHTML}
+              `;
+              container.appendChild(div);
+          });
+      }
+  }
+
+  // Actualizar etiquetas en otras pestañas (como Unidades)
   if (selectedBuildingLabel) selectedBuildingLabel.textContent = d.nombre;
   if (invoiceBuildingLabel) invoiceBuildingLabel.textContent = d.nombre;
 
+  // Actualizar resumen pequeño en tab Unidades
   if (unitsSummaryBuildingType) unitsSummaryBuildingType.textContent = d.tipo;
   if (unitsSummaryBuildingAddress) unitsSummaryBuildingAddress.textContent = d.direccion;
-  
-  if (unitsSummaryInternetCode) {
-      const s = services.length > 0 ? services[0] : {};
-      unitsSummaryInternetCode.textContent = s.codigo || "—";
-  }
-  if (unitsSummaryInternetCompany) {
-      const s = services.length > 0 ? services[0] : {};
-      unitsSummaryInternetCompany.textContent = s.empresa || "—";
-  }
-
   if (unitsSummaryWaterCode) unitsSummaryWaterCode.textContent = d.codigoAgua || "—";
   if (unitsSummaryGasCode) unitsSummaryGasCode.textContent = d.codigoGas || "—";
+  
+  // En el resumen pequeño de unidades, mostramos solo un resumen de texto para internet
+  if (unitsSummaryInternetCode) {
+     const count = (d.internetServices || []).length;
+     unitsSummaryInternetCode.textContent = count > 0 ? `${count} conexione(s)` : "—";
+  }
 }
-if (summaryOpenServicesBtn) summaryOpenServicesBtn.addEventListener("click", () => openBuildingServicesModal(selectedBuildingId, selectedBuildingData));
-if (summaryOpenMapBtn) summaryOpenMapBtn.addEventListener("click", () => openMapForBuilding(selectedBuildingId, selectedBuildingData));
-if (unitsSummaryOpenMapBtn) unitsSummaryOpenMapBtn.addEventListener("click", () => openMapForBuilding(selectedBuildingId, selectedBuildingData));
-
 // ========================= UNIDADES =========================
 async function cargarUnidades(buildingId) {
   unitList.innerHTML = "";
@@ -1259,6 +1281,22 @@ document.getElementById("cal-next")?.addEventListener("click", () => {
 document.querySelectorAll('.calendar-filters input').forEach(chk => {
     chk.addEventListener("change", renderCalendar);
 });
+// ========================= EVENTOS DE LOS BOTONES DE RESUMEN =========================
+
+if (summaryOpenServicesBtn) {
+  summaryOpenServicesBtn.addEventListener("click", () => {
+    // Verificamos que haya un edificio seleccionado antes de abrir
+    if (!selectedBuildingId) return alert("Primero selecciona un inmueble de la lista.");
+    openBuildingServicesModal(selectedBuildingId, selectedBuildingData);
+  });
+}
+
+if (summaryOpenMapBtn) {
+  summaryOpenMapBtn.addEventListener("click", () => {
+    if (!selectedBuildingId) return alert("Primero selecciona un inmueble de la lista.");
+    openMapForBuilding(selectedBuildingId, selectedBuildingData);
+  });
+}
 
 // =========================================================================
 //  GUARDAR RECIBO (Con Numeración Correlativa)
@@ -1315,23 +1353,69 @@ function generarPDFContratoAlquiler(info) {
   doc.save(`Contrato_${info.tenantNombre}.pdf`);
 }
 
+// ========================= PDF (Talonario Profesional con Altura Dinámica) =========================
 function generarPDFRecibo(info) {
+  // 1. PRE-CÁLCULO: Usamos una instancia temporal para medir el texto antes de dibujar
+  const tempDoc = new jsPDF();
+  tempDoc.setFont("helvetica", "normal");
+  tempDoc.setFontSize(10);
+  
+  const maxWidthTexto = 135;
+  const lineHeight = 5; // Altura estimada por línea en mm
+  
+  // Calculamos cuántas líneas ocupará el "Monto Escrito"
+  const montoTexto = numeroALetras(info.monto);
+  const textoMontoCompleto = `Bs. ${Number(info.monto).toFixed(2)}  (${montoTexto})`;
+  const lineasMonto = tempDoc.splitTextToSize(textoMontoCompleto, maxWidthTexto);
+  const alturaMonto = lineasMonto.length * lineHeight;
+  
+  // Calculamos cuántas líneas ocupará el "Concepto" (Aquí es donde crece)
+  const conceptoRaw = `${info.notas || "Alquiler"} - Inmueble: ${info.buildingNombre} - Unidad: ${info.unitNombre}`;
+  const lineasConcepto = tempDoc.splitTextToSize(conceptoRaw, maxWidthTexto);
+  const alturaConcepto = lineasConcepto.length * lineHeight;
+  
+  // 2. CÁLCULO DE POSICIONES Y ALTURA TOTAL DE LA HOJA
+  // Sumamos píxel a píxel cuánto espacio necesitamos verticalmente
+  let cursorY = 40;            // Posición inicial (Recibí de)
+  cursorY += 12;               // Espacio fijo hasta 'La Suma De'
+  cursorY += Math.max(12, alturaMonto + 2); // Espacio dinámico de 'La Suma De'
+  cursorY += alturaConcepto;   // Espacio dinámico de 'Concepto'
+  cursorY += 10;               // Margen extra antes del pie de página
+  
+  const alturaFooter = 15;     // Altura del cuadro de "Monto Total"
+  const margenFinal = 10;      // Espacio libre al final de la hoja
+  
+  const alturaNecesaria = cursorY + alturaFooter + margenFinal;
+  
+  // Si el contenido pide más de 110mm, usamos la altura necesaria. Si no, mantenemos el estándar de 110mm.
+  const alturaHoja = Math.max(110, alturaNecesaria);
+
+  // =======================================================
+  // 3. GENERACIÓN DEL PDF REAL
+  // =======================================================
   const doc = new jsPDF({
     orientation: "landscape",
     unit: "mm",
-    format: [210, 110] 
+    format: [210, alturaHoja] // <--- AQUÍ APLICAMOS LA ALTURA CALCULADA
   });
 
+  // Marco y Fondo (Ahora se adapta al alto de la hoja)
+  const margen = 5;
+  const altoMarco = alturaHoja - (margen * 2);
+  
   doc.setLineWidth(0.5); doc.setDrawColor(0);
-  doc.rect(5, 5, 200, 100); 
+  doc.rect(margen, margen, 200, altoMarco); 
 
+  // Encabezado Gris (Fijo arriba)
   doc.setFillColor(240, 240, 240);
-  doc.rect(5, 5, 200, 20, 'F'); doc.rect(5, 5, 200, 20);
+  doc.rect(margen, margen, 200, 20, 'F'); doc.rect(margen, margen, 200, 20);
 
+  // --- CONTENIDO ---
+  
+  // Título y Datos Header
   doc.setFont("helvetica", "bold"); doc.setFontSize(18);
   doc.text("RECIBO DE ALQUILER", 10, 18);
   
-  // NUMERO CORRELATIVO
   doc.setFontSize(12);
   const numRecibo = info.numero ? String(info.numero).padStart(6, '0') : "---";
   doc.text(`Nº: ${numRecibo}`, 195, 12, { align: "right" });
@@ -1339,45 +1423,57 @@ function generarPDFRecibo(info) {
   doc.setFontSize(10); doc.setFont("helvetica", "normal");
   doc.text(`Fecha: ${info.fechaDia}/${info.fechaMes}/${info.fechaAnio}`, 195, 20, { align: "right" });
 
+  // Cuerpo del Recibo
   let y = 40;
-  const xLabel = 15; const xValue = 55; const lineGap = 12;
-
+  const xLabel = 15; 
+  const xValue = 55; 
+  
+  // 1. Recibí de
   doc.setFont("helvetica", "bold"); doc.text("RECIBÍ DE:", xLabel, y);
   doc.setFont("helvetica", "normal"); doc.text(info.tenantNombre.toUpperCase(), xValue, y);
   doc.line(xValue - 2, y + 2, 195, y + 2);
   
-  y += lineGap;
+  y += 12; // Salto fijo
 
-  // MONTO EN LETRAS
+  // 2. La suma de
   doc.setFont("helvetica", "bold"); doc.text("LA SUMA DE:", xLabel, y);
   doc.setFont("helvetica", "normal");
-  const montoTexto = numeroALetras(info.monto);
-  doc.text(`Bs. ${Number(info.monto).toFixed(2)}  (${montoTexto})`, xValue, y);
-  doc.line(xValue - 2, y + 2, 195, y + 2);
+  doc.text(lineasMonto, xValue, y); // Imprimimos las líneas calculadas antes
+  
+  // Subrayado ajustado al texto
+  doc.line(xValue - 2, y + alturaMonto - 3, 195, y + alturaMonto - 3);
 
-  y += lineGap;
+  y += Math.max(12, alturaMonto + 2); // Salto dinámico
 
+  // 3. Concepto (Texto Largo)
   doc.setFont("helvetica", "bold"); doc.text("CONCEPTO:", xLabel, y);
   doc.setFont("helvetica", "normal");
-  const concepto = `${info.notas || "Alquiler"} - Inmueble: ${info.buildingNombre} - Unidad: ${info.unitNombre}`;
-  doc.text(concepto, xValue, y);
-  doc.line(xValue - 2, y + 2, 195, y + 2);
+  doc.text(lineasConcepto, xValue, y); // Imprimimos TODAS las líneas del concepto
+  
+  // Subrayado ajustado al final del bloque de texto
+  doc.line(xValue - 2, y + alturaConcepto - 3, 195, y + alturaConcepto - 3);
 
-  y += lineGap + 5;
+  // Empujamos hacia abajo para el pie de página
+  y += alturaConcepto + 10;
 
+  // --- PIE DE PÁGINA (Total y Firma) ---
+  // Ahora 'y' está garantizado para estar debajo del texto sin solaparse
   doc.setDrawColor(0); doc.setLineWidth(0.5);
+  
+  // Cuadro Total
   doc.rect(15, y, 60, 15);
-  doc.setFontSize(10); doc.text("MONTO TOTAL", 45, y + 5, { align: "center" });
-  doc.setFontSize(14); doc.setFont("helvetica", "bold");
+  doc.setFontSize(10); doc.setFont("helvetica", "bold");
+  doc.text("MONTO TOTAL", 45, y + 5, { align: "center" });
+  doc.setFontSize(14);
   doc.text(`Bs. ${Number(info.monto).toFixed(2)}`, 45, y + 12, { align: "center" });
 
+  // Línea Firma
   doc.line(120, y + 12, 190, y + 12);
   doc.setFontSize(8); doc.setFont("helvetica", "normal");
   doc.text("FIRMA / CONFORME", 155, y + 16, { align: "center" });
 
-  doc.save(`Recibo_${info.tenantNombre}_${info.fechaMes}-${info.fechaAnio}.pdf`);
+  doc.save(`Recibo_${info.tenantNombre.replace(/\s+/g, '_')}_${info.fechaMes}-${info.fechaAnio}.pdf`);
 }
-
 // ========================= CONVERSOR NÚMERO A LETRAS =========================
 function numeroALetras(num) {
     if (!num) return "CERO BOLIVIANOS";
