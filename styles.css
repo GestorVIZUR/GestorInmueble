@@ -140,6 +140,14 @@ input:checked + .spa-tab-label {
 .btn-wide { min-width: 150px; }
 .btn-xs { padding: 0.35rem 0.75rem; font-size: 0.8rem; }
 
+/* Botones para agregar servicios (+ pequeño) */
+.btn-add-service {
+  padding: 0.2rem 0.5rem;
+}
+.btn-add-service .material-symbols-outlined {
+  font-size: 16px;
+}
+
 .back-button {
   background: white; border: 1px solid var(--border-color); color: var(--text-muted);
   padding: 0.4rem 0.8rem; border-radius: 99px; cursor: pointer; display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.85rem;
@@ -274,11 +282,11 @@ label { display: block; margin-bottom: 0.4rem; font-size: 0.85rem; font-weight: 
   padding: 1rem 1.5rem; border-top: 1px solid var(--border-color); 
   display: flex; justify-content: flex-end; gap: 1rem; background: white;
 }
+
 /* ========================= MODAL MAPA CORREGIDO ========================= */
 .modal-map-grid { 
   display: grid; 
   grid-template-columns: 35% 65%; 
-  /* AQUÍ ESTÁ EL CAMBIO CLAVE: */
   grid-template-rows: 1fr auto; /* 1fr para el mapa, auto para los botones */
   height: 500px; 
   padding: 0; 
@@ -291,13 +299,13 @@ label { display: block; margin-bottom: 0.4rem; font-size: 0.85rem; font-weight: 
   display: flex; 
   flex-direction: column; 
   gap: 1rem;
-  grid-row: 1; /* Asegurar que esté en la fila de arriba */
+  grid-row: 1; 
 }
 
 .modal-map-right { 
   background: #e2e8f0; 
   position: relative; 
-  grid-row: 1; /* Asegurar que esté en la fila de arriba */
+  grid-row: 1; 
 }
 
 .modal-map-right iframe { 
@@ -308,24 +316,11 @@ label { display: block; margin-bottom: 0.4rem; font-size: 0.85rem; font-weight: 
 
 /* Ajuste específico para el footer dentro de este grid */
 .modal-map-grid .modal-footer {
-  grid-column: 1 / -1; /* Ocupar todo el ancho */
-  grid-row: 2;         /* Irse a la fila de abajo */
+  grid-column: 1 / -1; 
+  grid-row: 2; 
   border-top: 1px solid var(--border-color);
 }
 
-/* EN MÓVIL */
-@media (max-width: 900px) {
-  .modal-map-grid { 
-    display: flex; 
-    flex-direction: column; 
-    height: auto; 
-    max-height: 90vh; /* Evitar que se salga en móvil */
-  }
-  .modal-map-right { 
-    height: 250px; 
-    min-height: 250px;
-  }
-}
 /* ========================= CALENDARIO & RECIBOS ========================= */
 .receipts-layout {
   display: grid;
@@ -423,8 +418,17 @@ label { display: block; margin-bottom: 0.4rem; font-size: 0.85rem; font-weight: 
   .spa-main { padding: 1rem; }
   .split-layout, .split-layout.reverse, .modal-body-grid, .grid-2-col, .form-row { grid-template-columns: 1fr; }
   
-  .modal-map-grid { display: flex; flex-direction: column; height: auto; }
-  .modal-map-right { height: 250px; }
+  /* Ajuste Modal Mapa Móvil */
+  .modal-map-grid { 
+    display: flex; 
+    flex-direction: column; 
+    height: auto; 
+    max-height: 90vh; 
+  }
+  .modal-map-right { 
+    height: 250px; 
+    min-height: 250px;
+  }
   
   /* Ajustes Inputs */
   .date-inputs input { width: 100%; }
@@ -443,14 +447,13 @@ label { display: block; margin-bottom: 0.4rem; font-size: 0.85rem; font-weight: 
   .calendar-body { grid-auto-rows: minmax(80px, auto); }
 }
 
-/* ========================= INPUTS DINÁMICOS (CORREGIDO) ========================= */
+/* ========================= INPUTS DINÁMICOS ========================= */
 .dynamic-list-container {
   display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 1rem;
 }
 
 .internet-row {
   display: grid; 
-  /* Damos más espacio a la columna de precio */
   grid-template-columns: 1.2fr 1.2fr 1fr auto; /* Empresa | Codigo | Precio | Borrar */
   gap: 0.5rem; align-items: center;
   background: #f8fafc; padding: 0.5rem; border-radius: var(--radius-md); border: 1px solid var(--border-color);
@@ -468,35 +471,49 @@ label { display: block; margin-bottom: 0.4rem; font-size: 0.85rem; font-weight: 
 }
 .btn-remove-row:hover { background: #fef2f2; border-color: var(--danger); transform: scale(1.1); }
 
-/* Ajuste móvil */
 @media (max-width: 600px) {
   .internet-row { 
       grid-template-columns: 1fr; 
       gap: 0.5rem; 
       position: relative; 
-      padding-top: 2.5rem; /* Espacio para el botón de borrar arriba */
+      padding-top: 2.5rem; 
   }
   .btn-remove-row { position: absolute; top: 0.5rem; right: 0.5rem; }
 }
 
-/* ========================= MEJORAS RESUMEN INMUEBLE (INTERNET TAGS) ========================= */
-.icon-tiny {
-  font-size: 16px;
-  vertical-align: text-bottom;
-  margin-right: 4px;
-  color: var(--primary);
+/* ========================= SERVICIOS DINÁMICOS (ESTILOS NUEVOS) ========================= */
+
+.service-header-row {
+  display: flex; 
+  justify-content: space-between; 
+  align-items: center; 
+  margin-top: 0.5rem;
+  margin-bottom: 0.25rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-muted);
 }
 
-.internet-tags-container {
+.service-tags-container {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
+  margin-bottom: 0.5rem;
 }
 
-.internet-tag {
+.service-label {
+  display: block; 
+  margin-bottom: 0.25rem; 
+  color: var(--text-muted); 
+  font-size: 0.75rem; 
+  text-transform: uppercase;
+}
+
+/* Estilo unificado de etiqueta (Reemplaza visualmente a internet-tag para todos) */
+.service-tag {
   background: white;
   border: 1px solid var(--border-color);
-  padding: 0.4rem 0.75rem;
+  padding: 0.35rem 0.6rem;
   border-radius: 6px;
   font-size: 0.85rem;
   display: flex;
@@ -504,43 +521,26 @@ label { display: block; margin-bottom: 0.4rem; font-size: 0.85rem; font-weight: 
   gap: 0.5rem;
   box-shadow: 0 1px 2px rgba(0,0,0,0.05);
 }
+.service-tag strong { color: var(--text-main); font-weight: 600; }
+.service-tag .separator { width: 1px; height: 12px; background: var(--border-color); }
+.service-tag .code { font-family: monospace; color: var(--text-muted); }
+.service-tag .price { color: var(--success); font-weight: 500; font-size: 0.75rem; background: var(--success-bg); padding: 0.1rem 0.4rem; border-radius: 4px; }
 
-.internet-tag strong {
-  color: var(--primary);
-  font-weight: 600;
-}
-
-.internet-tag .separator {
-  width: 1px;
-  height: 12px;
-  background: var(--border-color);
-}
-
-.internet-tag .price {
-  color: var(--success);
-  font-weight: 500;
-  background: var(--success-bg);
-  padding: 0.1rem 0.4rem;
-  border-radius: 4px;
-  font-size: 0.75rem;
-}
-
+/* Link Style */
 .link-style {
     color: var(--primary);
     text-decoration: underline;
     cursor: pointer;
 }
 
-/* ========================= MEJORAS CABECERA CARD (BOTONES SOFT) ========================= */
-
-/* Contenedor flexible para Título vs Botones */
+/* ========================= CABECERA CARD (BOTONES SOFT) ========================= */
 .card-header-actions {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1.5rem; /* Separación con el contenido */
+  margin-bottom: 1.5rem; 
   padding-bottom: 0.75rem;
-  border-bottom: 1px solid #f1f5f9; /* Línea sutil divisora */
+  border-bottom: 1px solid #f1f5f9; 
 }
 
 .actions-group {
@@ -548,12 +548,11 @@ label { display: block; margin-bottom: 0.4rem; font-size: 0.85rem; font-weight: 
   gap: 0.5rem;
 }
 
-/* Botón "Soft" (Moderno, sin borde, fondo suave) */
 .btn-soft {
-  background: #f1f5f9; /* Gris muy suave */
+  background: #f1f5f9; 
   color: var(--text-muted);
   border: none;
-  border-radius: 8px; /* Bordes más redondeados */
+  border-radius: 8px; 
   padding: 0.4rem 0.8rem;
   font-size: 0.85rem;
   font-weight: 500;
@@ -565,17 +564,15 @@ label { display: block; margin-bottom: 0.4rem; font-size: 0.85rem; font-weight: 
 }
 
 .btn-soft .material-symbols-outlined {
-  font-size: 18px; /* Icono un poco más pequeño y elegante */
+  font-size: 18px; 
 }
 
-/* Efecto Hover: Se oscurece un poco y cambia el texto a color principal */
 .btn-soft:hover {
   background: #e2e8f0;
   color: var(--primary);
   transform: translateY(-1px);
 }
 
-/* Responsivo para móviles */
 @media (max-width: 600px) {
   .card-header-actions {
     flex-direction: column;
@@ -586,25 +583,22 @@ label { display: block; margin-bottom: 0.4rem; font-size: 0.85rem; font-weight: 
     width: 100%;
   }
   .btn-soft {
-    flex: 1; /* Botones anchos en móvil */
+    flex: 1; 
     justify-content: center;
   }
 }
 
 /* ========================= UTILIDADES NUEVAS (AUTO-GROW) ========================= */
-
-/* El input que crece solo (Magia moderna CSS) */
 .auto-grow {
-  field-sizing: content; /* La propiedad nueva que recordabas */
-  min-height: 45px;      /* Altura mínima inicial */
-  resize: none;          /* Quitar el tirador manual de la esquina */
-  overflow: hidden;      /* Ocultar scrollbar */
+  field-sizing: content; 
+  min-height: 45px;      
+  resize: none;         
+  overflow: hidden;      
   font-family: inherit;
   line-height: 1.5;
   transition: min-height 0.2s;
 }
 
-/* Fallback para navegadores viejos (opcional, por si acaso) */
 @supports not (field-sizing: content) {
   .auto-grow {
     height: auto;
